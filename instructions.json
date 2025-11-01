@@ -1,0 +1,3777 @@
+{
+  "project": {
+    "name": "StreamVibe",
+    "version": "3.0.0",
+    "description": "Video content aggregation platform for creators - sync, optimize, and distribute content across YouTube, Instagram, TikTok with AI-powered suggestions and SEO automation",
+    "repository": "https://github.com/nani-bobbara/StreamVibe-API",
+    "documentation": [
+      "StreamVibe_v3_production.sql",
+      "V2_TO_V3_MIGRATION_GUIDE.md",
+      "SCHEMA_SUMMARY.md",
+      "SCHEMA_REFACTORING_ANALYSIS.md",
+      "AUTHENTICATION_ARCHITECTURE.md",
+      "STRIPE_INTEGRATION.md",
+      "STRIPE_CACHING_STRATEGY.md",
+      "SEO_INDEXING_INTEGRATION.md",
+      "USER_FLOW_IMPLEMENTATION.md",
+      "ARCHITECTURE_DECISIONS.md"
+    ]
+  },
+  "infrastructure": {
+    "platform": "Supabase",
+    "region": "us-east-1",
+    "tier": "Pro",
+    "requirements": {
+      "postgresql_version": "15+",
+      "extensions": [
+        "uuid-ossp",
+        "pgcrypto",
+        "pg_cron",
+        "pg_net",
+        "pgsodium"
+      ],
+      "scheduled_jobs": true,
+      "vault_enabled": true,
+      "realtime_enabled": false,
+      "storage_enabled": false
+    }
+  },
+  "database": {
+    "enums": [
+      {
+        "name": "visibility_enum",
+        "values": [
+          "public",
+          "private",
+          "unlisted"
+        ]
+      },
+      {
+        "name": "app_role_enum",
+        "values": [
+          "user",
+          "admin",
+          "moderator"
+        ]
+      },
+      {
+        "name": "notification_type_enum",
+        "values": [
+          "info",
+          "success",
+          "warning",
+          "error"
+        ]
+      },
+      {
+        "name": "action_mode_enum",
+        "values": [
+          "auto",
+          "manual",
+          "disabled"
+        ]
+      }
+    ],
+    "lookup_tables": [
+      {
+        "name": "platform",
+        "description": "Supported social media platforms",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "primary": true,
+            "default": "gen_random_uuid()"
+          },
+          {
+            "name": "slug",
+            "type": "text",
+            "unique": true,
+            "not_null": true
+          },
+          {
+            "name": "display_name",
+            "type": "text",
+            "not_null": true
+          },
+          {
+            "name": "description",
+            "type": "text"
+          },
+          {
+            "name": "website_url",
+            "type": "text"
+          },
+          {
+            "name": "logo_url",
+            "type": "text"
+          },
+          {
+            "name": "api_docs_url",
+            "type": "text"
+          },
+          {
+            "name": "is_oauth_required",
+            "type": "boolean",
+            "default": true
+          },
+          {
+            "name": "is_active",
+            "type": "boolean",
+            "default": true
+          },
+          {
+            "name": "sort_order",
+            "type": "integer",
+            "default": 0
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz",
+            "default": "now()"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz",
+            "default": "now()"
+          }
+        ],
+        "initial_data": [
+          {
+            "slug": "youtube",
+            "display_name": "YouTube",
+            "sort_order": 1
+          },
+          {
+            "slug": "instagram",
+            "display_name": "Instagram",
+            "sort_order": 2
+          },
+          {
+            "slug": "tiktok",
+            "display_name": "TikTok",
+            "sort_order": 3
+          },
+          {
+            "slug": "facebook",
+            "display_name": "Facebook",
+            "sort_order": 4
+          },
+          {
+            "slug": "twitter",
+            "display_name": "Twitter/X",
+            "sort_order": 5
+          }
+        ]
+      },
+      {
+        "name": "content_type",
+        "description": "Types of content",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "primary": true
+          },
+          {
+            "name": "slug",
+            "type": "text",
+            "unique": true
+          },
+          {
+            "name": "display_name",
+            "type": "text"
+          },
+          {
+            "name": "description",
+            "type": "text"
+          },
+          {
+            "name": "is_active",
+            "type": "boolean",
+            "default": true
+          },
+          {
+            "name": "sort_order",
+            "type": "integer"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz"
+          }
+        ],
+        "initial_data": [
+          {
+            "slug": "long_video",
+            "display_name": "Long Video",
+            "sort_order": 1
+          },
+          {
+            "slug": "short_video",
+            "display_name": "Short Video",
+            "sort_order": 2
+          },
+          {
+            "slug": "image",
+            "display_name": "Image",
+            "sort_order": 3
+          },
+          {
+            "slug": "carousel",
+            "display_name": "Carousel",
+            "sort_order": 4
+          },
+          {
+            "slug": "story",
+            "display_name": "Story",
+            "sort_order": 5
+          },
+          {
+            "slug": "reel",
+            "display_name": "Reel",
+            "sort_order": 6
+          },
+          {
+            "slug": "post",
+            "display_name": "Post",
+            "sort_order": 7
+          }
+        ]
+      },
+      {
+        "name": "job_type",
+        "description": "Background job types (audit reference)",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "primary": true
+          },
+          {
+            "name": "slug",
+            "type": "text",
+            "unique": true
+          },
+          {
+            "name": "display_name",
+            "type": "text"
+          },
+          {
+            "name": "description",
+            "type": "text"
+          },
+          {
+            "name": "is_active",
+            "type": "boolean"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz"
+          }
+        ]
+      },
+      {
+        "name": "subscription_tier",
+        "description": "Subscription tier definitions with quotas and pricing",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "primary": true
+          },
+          {
+            "name": "slug",
+            "type": "text",
+            "unique": true
+          },
+          {
+            "name": "display_name",
+            "type": "text"
+          },
+          {
+            "name": "description",
+            "type": "text"
+          },
+          {
+            "name": "max_social_accounts",
+            "type": "integer",
+            "default": 1
+          },
+          {
+            "name": "max_syncs_per_month",
+            "type": "integer",
+            "default": 10
+          },
+          {
+            "name": "max_ai_analyses_per_month",
+            "type": "integer",
+            "default": 25
+          },
+          {
+            "name": "max_seo_submissions_per_month",
+            "type": "integer",
+            "default": 0
+          },
+          {
+            "name": "price_cents",
+            "type": "integer",
+            "default": 0
+          },
+          {
+            "name": "currency",
+            "type": "text",
+            "default": "usd"
+          },
+          {
+            "name": "stripe_price_id",
+            "type": "text"
+          },
+          {
+            "name": "stripe_product_id",
+            "type": "text"
+          },
+          {
+            "name": "is_featured",
+            "type": "boolean",
+            "default": false
+          },
+          {
+            "name": "is_active",
+            "type": "boolean",
+            "default": true
+          },
+          {
+            "name": "sort_order",
+            "type": "integer"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz"
+          }
+        ],
+        "initial_data": [
+          {
+            "slug": "free",
+            "display_name": "Free",
+            "max_social_accounts": 1,
+            "max_syncs_per_month": 10,
+            "max_ai_analyses_per_month": 25,
+            "max_seo_submissions_per_month": 0,
+            "price_cents": 0
+          },
+          {
+            "slug": "basic",
+            "display_name": "Basic",
+            "max_social_accounts": 3,
+            "max_syncs_per_month": 100,
+            "max_ai_analyses_per_month": 100,
+            "max_seo_submissions_per_month": 50,
+            "price_cents": 1900,
+            "is_featured": true
+          },
+          {
+            "slug": "premium",
+            "display_name": "Premium",
+            "max_social_accounts": 10,
+            "max_syncs_per_month": 500,
+            "max_ai_analyses_per_month": 500,
+            "max_seo_submissions_per_month": 200,
+            "price_cents": 4900,
+            "is_featured": true
+          }
+        ]
+      },
+      {
+        "name": "subscription_status",
+        "description": "Subscription status types",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "primary": true
+          },
+          {
+            "name": "slug",
+            "type": "text",
+            "unique": true
+          },
+          {
+            "name": "display_name",
+            "type": "text"
+          },
+          {
+            "name": "description",
+            "type": "text"
+          },
+          {
+            "name": "is_active_state",
+            "type": "boolean",
+            "default": true
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          }
+        ],
+        "initial_data": [
+          {
+            "slug": "active",
+            "display_name": "Active",
+            "is_active_state": true
+          },
+          {
+            "slug": "trialing",
+            "display_name": "Trialing",
+            "is_active_state": true
+          },
+          {
+            "slug": "past_due",
+            "display_name": "Past Due",
+            "is_active_state": true
+          },
+          {
+            "slug": "canceled",
+            "display_name": "Canceled",
+            "is_active_state": false
+          },
+          {
+            "slug": "paused",
+            "display_name": "Paused",
+            "is_active_state": false
+          }
+        ]
+      },
+      {
+        "name": "account_status",
+        "description": "Social account connection statuses",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "primary": true
+          },
+          {
+            "name": "slug",
+            "type": "text",
+            "unique": true
+          },
+          {
+            "name": "display_name",
+            "type": "text"
+          },
+          {
+            "name": "description",
+            "type": "text"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          }
+        ],
+        "initial_data": [
+          {
+            "slug": "active",
+            "display_name": "Active"
+          },
+          {
+            "slug": "inactive",
+            "display_name": "Inactive"
+          },
+          {
+            "slug": "suspended",
+            "display_name": "Suspended"
+          },
+          {
+            "slug": "disconnected",
+            "display_name": "Disconnected"
+          }
+        ]
+      },
+      {
+        "name": "ai_provider",
+        "description": "Supported AI providers",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "primary": true
+          },
+          {
+            "name": "slug",
+            "type": "text",
+            "unique": true
+          },
+          {
+            "name": "display_name",
+            "type": "text"
+          },
+          {
+            "name": "base_url",
+            "type": "text"
+          },
+          {
+            "name": "is_api_key_required",
+            "type": "boolean",
+            "default": true
+          },
+          {
+            "name": "is_streaming_supported",
+            "type": "boolean",
+            "default": false
+          },
+          {
+            "name": "is_active",
+            "type": "boolean",
+            "default": true
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz"
+          }
+        ],
+        "initial_data": [
+          {
+            "slug": "openai",
+            "display_name": "OpenAI",
+            "base_url": "https://api.openai.com/v1",
+            "is_streaming_supported": true
+          },
+          {
+            "slug": "anthropic",
+            "display_name": "Anthropic",
+            "base_url": "https://api.anthropic.com/v1",
+            "is_streaming_supported": true
+          },
+          {
+            "slug": "google",
+            "display_name": "Google AI",
+            "base_url": "https://generativelanguage.googleapis.com/v1"
+          },
+          {
+            "slug": "local",
+            "display_name": "Local Model",
+            "base_url": "http://localhost:11434",
+            "is_api_key_required": false,
+            "is_streaming_supported": true
+          }
+        ]
+      },
+      {
+        "name": "search_engine",
+        "description": "Supported search engines for SEO",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "primary": true
+          },
+          {
+            "name": "slug",
+            "type": "text",
+            "unique": true
+          },
+          {
+            "name": "display_name",
+            "type": "text"
+          },
+          {
+            "name": "api_endpoint",
+            "type": "text"
+          },
+          {
+            "name": "api_docs_url",
+            "type": "text"
+          },
+          {
+            "name": "supports_indexnow",
+            "type": "boolean",
+            "default": false
+          },
+          {
+            "name": "is_active",
+            "type": "boolean",
+            "default": true
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz"
+          }
+        ],
+        "initial_data": [
+          {
+            "slug": "google",
+            "display_name": "Google Search Console",
+            "api_endpoint": "https://indexing.googleapis.com/v3",
+            "supports_indexnow": false
+          },
+          {
+            "slug": "bing",
+            "display_name": "Bing Webmaster Tools",
+            "api_endpoint": "https://ssl.bing.com/webmaster/api.svc/json",
+            "supports_indexnow": true
+          },
+          {
+            "slug": "yandex",
+            "display_name": "Yandex Webmaster",
+            "api_endpoint": "https://api.webmaster.yandex.net/v4",
+            "supports_indexnow": false
+          },
+          {
+            "slug": "indexnow",
+            "display_name": "IndexNow Protocol",
+            "api_endpoint": "https://api.indexnow.org",
+            "supports_indexnow": true
+          }
+        ]
+      }
+    ],
+    "core_tables": [
+      {
+        "name": "users",
+        "description": "User profiles (extends auth.users)",
+        "rls": true,
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "primary": true,
+            "foreign_key": "auth.users(id) ON DELETE CASCADE"
+          },
+          {
+            "name": "email",
+            "type": "text",
+            "not_null": true
+          },
+          {
+            "name": "full_name",
+            "type": "text"
+          },
+          {
+            "name": "avatar_url",
+            "type": "text"
+          },
+          {
+            "name": "timezone",
+            "type": "text",
+            "default": "UTC"
+          },
+          {
+            "name": "language",
+            "type": "text",
+            "default": "en"
+          },
+          {
+            "name": "is_onboarded",
+            "type": "boolean",
+            "default": false
+          },
+          {
+            "name": "onboarded_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz"
+          }
+        ]
+      },
+      {
+        "name": "user_setting",
+        "description": "User preferences and settings",
+        "rls": true,
+        "columns": [
+          {
+            "name": "user_id",
+            "type": "uuid",
+            "primary": true,
+            "foreign_key": "users(id) ON DELETE CASCADE"
+          },
+          {
+            "name": "is_email_notifications_enabled",
+            "type": "boolean",
+            "default": true
+          },
+          {
+            "name": "is_push_notifications_enabled",
+            "type": "boolean",
+            "default": true
+          },
+          {
+            "name": "is_weekly_digest_enabled",
+            "type": "boolean",
+            "default": true
+          },
+          {
+            "name": "is_auto_sync_enabled",
+            "type": "boolean",
+            "default": false
+          },
+          {
+            "name": "sync_frequency_hours",
+            "type": "integer",
+            "default": 24
+          },
+          {
+            "name": "is_auto_ai_analysis_enabled",
+            "type": "boolean",
+            "default": false
+          },
+          {
+            "name": "is_auto_apply_ai_suggestions_enabled",
+            "type": "boolean",
+            "default": false
+          },
+          {
+            "name": "is_auto_seo_submission_enabled",
+            "type": "boolean",
+            "default": false
+          },
+          {
+            "name": "is_profile_public",
+            "type": "boolean",
+            "default": true
+          },
+          {
+            "name": "is_analytics_enabled",
+            "type": "boolean",
+            "default": true
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz"
+          }
+        ]
+      },
+      {
+        "name": "subscription",
+        "description": "User subscriptions with usage tracking",
+        "rls": true,
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "primary": true
+          },
+          {
+            "name": "user_id",
+            "type": "uuid",
+            "unique": true,
+            "foreign_key": "users(id) ON DELETE CASCADE"
+          },
+          {
+            "name": "tier_id",
+            "type": "uuid",
+            "foreign_key": "subscription_tier(id)"
+          },
+          {
+            "name": "status_id",
+            "type": "uuid",
+            "foreign_key": "subscription_status(id)"
+          },
+          {
+            "name": "syncs_used",
+            "type": "integer",
+            "default": 0
+          },
+          {
+            "name": "ai_analyses_used",
+            "type": "integer",
+            "default": 0
+          },
+          {
+            "name": "seo_submissions_used",
+            "type": "integer",
+            "default": 0
+          },
+          {
+            "name": "cycle_start_date",
+            "type": "timestamptz"
+          },
+          {
+            "name": "cycle_end_date",
+            "type": "timestamptz"
+          },
+          {
+            "name": "next_billing_date",
+            "type": "timestamptz"
+          },
+          {
+            "name": "stripe_customer_id",
+            "type": "text"
+          },
+          {
+            "name": "stripe_subscription_id",
+            "type": "text"
+          },
+          {
+            "name": "stripe_subscription_item_id_syncs",
+            "type": "text"
+          },
+          {
+            "name": "stripe_subscription_item_id_ai",
+            "type": "text"
+          },
+          {
+            "name": "stripe_subscription_item_id_seo",
+            "type": "text"
+          },
+          {
+            "name": "is_auto_renew_enabled",
+            "type": "boolean",
+            "default": true
+          },
+          {
+            "name": "canceled_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "cancellation_reason",
+            "type": "text"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz"
+          }
+        ]
+      },
+      {
+        "name": "platform_connection",
+        "description": "OAuth connections with Vault-stored credentials",
+        "rls": true,
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "primary": true
+          },
+          {
+            "name": "user_id",
+            "type": "uuid",
+            "foreign_key": "users(id) ON DELETE CASCADE"
+          },
+          {
+            "name": "platform_id",
+            "type": "uuid",
+            "foreign_key": "platform(id)"
+          },
+          {
+            "name": "vault_secret_name",
+            "type": "text",
+            "not_null": true,
+            "comment": "Reference to Vault secret, NOT actual credentials"
+          },
+          {
+            "name": "scopes",
+            "type": "text[]"
+          },
+          {
+            "name": "token_expires_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "platform_user_id",
+            "type": "text"
+          },
+          {
+            "name": "platform_username",
+            "type": "text"
+          },
+          {
+            "name": "platform_display_name",
+            "type": "text"
+          },
+          {
+            "name": "platform_avatar_url",
+            "type": "text"
+          },
+          {
+            "name": "is_active",
+            "type": "boolean",
+            "default": true
+          },
+          {
+            "name": "is_verified",
+            "type": "boolean",
+            "default": false
+          },
+          {
+            "name": "last_verified_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "last_error",
+            "type": "text"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz"
+          }
+        ],
+        "constraints": [
+          "UNIQUE(user_id, platform_id)"
+        ]
+      },
+      {
+        "name": "social_account",
+        "description": "Connected social media accounts/channels",
+        "rls": true,
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "primary": true
+          },
+          {
+            "name": "user_id",
+            "type": "uuid",
+            "foreign_key": "users(id) ON DELETE CASCADE",
+            "comment": "Denormalized for query performance"
+          },
+          {
+            "name": "connection_id",
+            "type": "uuid",
+            "foreign_key": "platform_connection(id) ON DELETE CASCADE"
+          },
+          {
+            "name": "platform_id",
+            "type": "uuid",
+            "foreign_key": "platform(id)"
+          },
+          {
+            "name": "status_id",
+            "type": "uuid",
+            "foreign_key": "account_status(id)"
+          },
+          {
+            "name": "account_name",
+            "type": "text"
+          },
+          {
+            "name": "account_url",
+            "type": "text"
+          },
+          {
+            "name": "description",
+            "type": "text"
+          },
+          {
+            "name": "follower_count",
+            "type": "integer",
+            "default": 0
+          },
+          {
+            "name": "following_count",
+            "type": "integer",
+            "default": 0
+          },
+          {
+            "name": "post_count",
+            "type": "integer",
+            "default": 0
+          },
+          {
+            "name": "sync_mode",
+            "type": "action_mode_enum",
+            "default": "manual"
+          },
+          {
+            "name": "last_synced_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "last_sync_status",
+            "type": "text"
+          },
+          {
+            "name": "next_sync_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "visibility",
+            "type": "visibility_enum",
+            "default": "public"
+          },
+          {
+            "name": "is_primary",
+            "type": "boolean",
+            "default": false
+          },
+          {
+            "name": "deleted_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz"
+          }
+        ]
+      },
+      {
+        "name": "content_item",
+        "description": "Synced content from social platforms",
+        "rls": true,
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "primary": true
+          },
+          {
+            "name": "social_account_id",
+            "type": "uuid",
+            "foreign_key": "social_account(id) ON DELETE RESTRICT"
+          },
+          {
+            "name": "platform_id",
+            "type": "uuid",
+            "foreign_key": "platform(id)",
+            "comment": "Denormalized for performance"
+          },
+          {
+            "name": "content_type_id",
+            "type": "uuid",
+            "foreign_key": "content_type(id)"
+          },
+          {
+            "name": "platform_content_id",
+            "type": "text"
+          },
+          {
+            "name": "platform_url",
+            "type": "text"
+          },
+          {
+            "name": "title",
+            "type": "text"
+          },
+          {
+            "name": "description",
+            "type": "text"
+          },
+          {
+            "name": "thumbnail_url",
+            "type": "text"
+          },
+          {
+            "name": "media_url",
+            "type": "text"
+          },
+          {
+            "name": "duration_seconds",
+            "type": "integer"
+          },
+          {
+            "name": "views_count",
+            "type": "integer",
+            "default": 0
+          },
+          {
+            "name": "likes_count",
+            "type": "integer",
+            "default": 0
+          },
+          {
+            "name": "comments_count",
+            "type": "integer",
+            "default": 0
+          },
+          {
+            "name": "shares_count",
+            "type": "integer",
+            "default": 0
+          },
+          {
+            "name": "tags",
+            "type": "text[]"
+          },
+          {
+            "name": "hashtags",
+            "type": "text[]"
+          },
+          {
+            "name": "category",
+            "type": "text"
+          },
+          {
+            "name": "language",
+            "type": "text",
+            "default": "en"
+          },
+          {
+            "name": "search_vector",
+            "type": "tsvector",
+            "generated": "ALWAYS AS (setweight(to_tsvector('english', coalesce(title, '')), 'A') || setweight(to_tsvector('english', coalesce(description, '')), 'B') || setweight(to_tsvector('english', array_to_string(coalesce(tags, ARRAY[]::TEXT[]), ' ')), 'C')) STORED"
+          },
+          {
+            "name": "published_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "synced_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "visibility",
+            "type": "visibility_enum",
+            "default": "public"
+          },
+          {
+            "name": "deleted_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz"
+          }
+        ],
+        "constraints": [
+          "UNIQUE(platform_id, platform_content_id)"
+        ]
+      },
+      {
+        "name": "content_revision",
+        "description": "Audit trail of content modifications",
+        "rls": true,
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "primary": true
+          },
+          {
+            "name": "content_item_id",
+            "type": "uuid",
+            "foreign_key": "content_item(id) ON DELETE CASCADE"
+          },
+          {
+            "name": "user_id",
+            "type": "uuid",
+            "foreign_key": "users(id) ON DELETE SET NULL"
+          },
+          {
+            "name": "field_name",
+            "type": "text"
+          },
+          {
+            "name": "old_value",
+            "type": "text"
+          },
+          {
+            "name": "new_value",
+            "type": "text"
+          },
+          {
+            "name": "change_source",
+            "type": "text",
+            "comment": "manual, ai_suggestion, bulk_edit"
+          },
+          {
+            "name": "change_reason",
+            "type": "text"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          }
+        ]
+      },
+      {
+        "name": "ai_model",
+        "description": "Available AI models with pricing",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "primary": true
+          },
+          {
+            "name": "provider_id",
+            "type": "uuid",
+            "foreign_key": "ai_provider(id)"
+          },
+          {
+            "name": "model_name",
+            "type": "text"
+          },
+          {
+            "name": "display_name",
+            "type": "text"
+          },
+          {
+            "name": "capabilities",
+            "type": "text[]",
+            "comment": "text_generation, vision, embeddings"
+          },
+          {
+            "name": "max_context_tokens",
+            "type": "integer",
+            "default": 8192
+          },
+          {
+            "name": "input_cost_per_1k_tokens",
+            "type": "decimal(10,4)"
+          },
+          {
+            "name": "output_cost_per_1k_tokens",
+            "type": "decimal(10,4)"
+          },
+          {
+            "name": "is_active",
+            "type": "boolean",
+            "default": true
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz"
+          }
+        ],
+        "constraints": [
+          "UNIQUE(provider_id, model_name)"
+        ]
+      },
+      {
+        "name": "user_ai_setting",
+        "description": "User AI preferences",
+        "rls": true,
+        "columns": [
+          {
+            "name": "user_id",
+            "type": "uuid",
+            "primary": true,
+            "foreign_key": "users(id) ON DELETE CASCADE"
+          },
+          {
+            "name": "preferred_provider_id",
+            "type": "uuid",
+            "foreign_key": "ai_provider(id)"
+          },
+          {
+            "name": "preferred_model_id",
+            "type": "uuid",
+            "foreign_key": "ai_model(id)"
+          },
+          {
+            "name": "tone",
+            "type": "text",
+            "default": "professional",
+            "comment": "professional, casual, enthusiastic"
+          },
+          {
+            "name": "language",
+            "type": "text",
+            "default": "en"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz"
+          }
+        ]
+      },
+      {
+        "name": "ai_suggestion",
+        "description": "AI-generated content optimization suggestions",
+        "rls": true,
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "primary": true
+          },
+          {
+            "name": "content_item_id",
+            "type": "uuid",
+            "foreign_key": "content_item(id) ON DELETE CASCADE"
+          },
+          {
+            "name": "provider_id",
+            "type": "uuid",
+            "foreign_key": "ai_provider(id)"
+          },
+          {
+            "name": "model_id",
+            "type": "uuid",
+            "foreign_key": "ai_model(id)"
+          },
+          {
+            "name": "suggested_titles",
+            "type": "text[]"
+          },
+          {
+            "name": "suggested_description",
+            "type": "text"
+          },
+          {
+            "name": "suggested_tags",
+            "type": "text[]"
+          },
+          {
+            "name": "suggested_category",
+            "type": "text"
+          },
+          {
+            "name": "trending_keywords",
+            "type": "text[]"
+          },
+          {
+            "name": "trending_hashtags",
+            "type": "text[]"
+          },
+          {
+            "name": "related_topics",
+            "type": "text[]"
+          },
+          {
+            "name": "trending_score",
+            "type": "decimal(3,2)",
+            "comment": "0.00 to 1.00"
+          },
+          {
+            "name": "seo_score",
+            "type": "decimal(3,2)"
+          },
+          {
+            "name": "readability_score",
+            "type": "decimal(3,2)"
+          },
+          {
+            "name": "confidence_score",
+            "type": "decimal(3,2)"
+          },
+          {
+            "name": "sentiment",
+            "type": "text",
+            "comment": "positive, neutral, negative"
+          },
+          {
+            "name": "target_audience",
+            "type": "text[]"
+          },
+          {
+            "name": "prompt_tokens",
+            "type": "integer"
+          },
+          {
+            "name": "completion_tokens",
+            "type": "integer"
+          },
+          {
+            "name": "total_cost_cents",
+            "type": "decimal(10,2)"
+          },
+          {
+            "name": "processing_time_ms",
+            "type": "integer"
+          },
+          {
+            "name": "is_applied",
+            "type": "boolean",
+            "default": false
+          },
+          {
+            "name": "applied_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "version",
+            "type": "integer",
+            "default": 1
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz"
+          }
+        ]
+      },
+      {
+        "name": "ai_usage",
+        "description": "AI API usage tracking for billing",
+        "rls": true,
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "primary": true
+          },
+          {
+            "name": "user_id",
+            "type": "uuid",
+            "foreign_key": "users(id) ON DELETE CASCADE"
+          },
+          {
+            "name": "provider_id",
+            "type": "uuid",
+            "foreign_key": "ai_provider(id)"
+          },
+          {
+            "name": "model_id",
+            "type": "uuid",
+            "foreign_key": "ai_model(id)"
+          },
+          {
+            "name": "content_item_id",
+            "type": "uuid",
+            "foreign_key": "content_item(id) ON DELETE SET NULL"
+          },
+          {
+            "name": "operation_type",
+            "type": "text",
+            "comment": "analyze_content, generate_tags, optimize_description"
+          },
+          {
+            "name": "prompt_tokens",
+            "type": "integer"
+          },
+          {
+            "name": "completion_tokens",
+            "type": "integer"
+          },
+          {
+            "name": "total_tokens",
+            "type": "integer"
+          },
+          {
+            "name": "cost_cents",
+            "type": "decimal(10,2)"
+          },
+          {
+            "name": "processing_time_ms",
+            "type": "integer"
+          },
+          {
+            "name": "billing_cycle_start",
+            "type": "timestamptz"
+          },
+          {
+            "name": "billing_cycle_end",
+            "type": "timestamptz"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          }
+        ]
+      },
+      {
+        "name": "trending_keyword",
+        "description": "Cached trending keywords from various sources",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "primary": true
+          },
+          {
+            "name": "platform_id",
+            "type": "uuid",
+            "foreign_key": "platform(id)"
+          },
+          {
+            "name": "keyword",
+            "type": "text"
+          },
+          {
+            "name": "category",
+            "type": "text"
+          },
+          {
+            "name": "trending_score",
+            "type": "decimal(5,2)"
+          },
+          {
+            "name": "search_volume",
+            "type": "integer"
+          },
+          {
+            "name": "competition_level",
+            "type": "text",
+            "comment": "low, medium, high"
+          },
+          {
+            "name": "source",
+            "type": "text",
+            "comment": "google_trends, tiktok_creative_center, youtube_trending"
+          },
+          {
+            "name": "region",
+            "type": "text",
+            "default": "US"
+          },
+          {
+            "name": "language",
+            "type": "text",
+            "default": "en"
+          },
+          {
+            "name": "valid_from",
+            "type": "timestamptz"
+          },
+          {
+            "name": "valid_until",
+            "type": "timestamptz"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          }
+        ],
+        "constraints": [
+          "UNIQUE(platform_id, keyword, region, language, valid_from)"
+        ]
+      },
+      {
+        "name": "seo_connection",
+        "description": "Search engine API connections with Vault credentials",
+        "rls": true,
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "primary": true
+          },
+          {
+            "name": "user_id",
+            "type": "uuid",
+            "foreign_key": "users(id) ON DELETE CASCADE"
+          },
+          {
+            "name": "search_engine_id",
+            "type": "uuid",
+            "foreign_key": "search_engine(id)"
+          },
+          {
+            "name": "vault_secret_name",
+            "type": "text"
+          },
+          {
+            "name": "site_url",
+            "type": "text"
+          },
+          {
+            "name": "is_active",
+            "type": "boolean",
+            "default": true
+          },
+          {
+            "name": "is_verified",
+            "type": "boolean",
+            "default": false
+          },
+          {
+            "name": "last_verified_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "last_error",
+            "type": "text"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz"
+          }
+        ],
+        "constraints": [
+          "UNIQUE(user_id, search_engine_id, site_url)"
+        ]
+      },
+      {
+        "name": "seo_submission",
+        "description": "URL submissions to search engines",
+        "rls": true,
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "primary": true
+          },
+          {
+            "name": "content_item_id",
+            "type": "uuid",
+            "foreign_key": "content_item(id) ON DELETE CASCADE"
+          },
+          {
+            "name": "connection_id",
+            "type": "uuid",
+            "foreign_key": "seo_connection(id)"
+          },
+          {
+            "name": "search_engine_id",
+            "type": "uuid",
+            "foreign_key": "search_engine(id)"
+          },
+          {
+            "name": "submitted_url",
+            "type": "text"
+          },
+          {
+            "name": "submission_type",
+            "type": "text",
+            "comment": "url_updated, url_deleted"
+          },
+          {
+            "name": "submission_method",
+            "type": "text",
+            "comment": "indexnow, url_inspection_api, direct_submit"
+          },
+          {
+            "name": "request_payload",
+            "type": "jsonb"
+          },
+          {
+            "name": "response_status",
+            "type": "integer"
+          },
+          {
+            "name": "response_body",
+            "type": "jsonb"
+          },
+          {
+            "name": "status",
+            "type": "text",
+            "default": "pending",
+            "comment": "pending, submitted, indexed, failed, excluded"
+          },
+          {
+            "name": "status_checked_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "index_status_url",
+            "type": "text"
+          },
+          {
+            "name": "coverage_state",
+            "type": "text"
+          },
+          {
+            "name": "error_message",
+            "type": "text"
+          },
+          {
+            "name": "retry_count",
+            "type": "integer",
+            "default": 0
+          },
+          {
+            "name": "next_retry_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "submitted_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "indexed_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz"
+          }
+        ]
+      },
+      {
+        "name": "seo_usage",
+        "description": "SEO API usage tracking for billing",
+        "rls": true,
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "primary": true
+          },
+          {
+            "name": "user_id",
+            "type": "uuid",
+            "foreign_key": "users(id) ON DELETE CASCADE"
+          },
+          {
+            "name": "search_engine_id",
+            "type": "uuid",
+            "foreign_key": "search_engine(id)"
+          },
+          {
+            "name": "content_item_id",
+            "type": "uuid",
+            "foreign_key": "content_item(id) ON DELETE SET NULL"
+          },
+          {
+            "name": "operation_type",
+            "type": "text",
+            "comment": "url_submit, status_check, bulk_submit"
+          },
+          {
+            "name": "urls_count",
+            "type": "integer",
+            "default": 1
+          },
+          {
+            "name": "billing_cycle_start",
+            "type": "timestamptz"
+          },
+          {
+            "name": "billing_cycle_end",
+            "type": "timestamptz"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          }
+        ]
+      },
+      {
+        "name": "notification",
+        "description": "User notifications",
+        "rls": true,
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "primary": true
+          },
+          {
+            "name": "user_id",
+            "type": "uuid",
+            "foreign_key": "users(id) ON DELETE CASCADE"
+          },
+          {
+            "name": "type",
+            "type": "notification_type_enum",
+            "default": "info"
+          },
+          {
+            "name": "title",
+            "type": "text"
+          },
+          {
+            "name": "message",
+            "type": "text"
+          },
+          {
+            "name": "action_url",
+            "type": "text"
+          },
+          {
+            "name": "action_label",
+            "type": "text"
+          },
+          {
+            "name": "metadata",
+            "type": "jsonb"
+          },
+          {
+            "name": "related_entity_type",
+            "type": "text",
+            "comment": "content_item, social_account, subscription"
+          },
+          {
+            "name": "related_entity_id",
+            "type": "uuid"
+          },
+          {
+            "name": "is_read",
+            "type": "boolean",
+            "default": false
+          },
+          {
+            "name": "read_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "expires_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz"
+          }
+        ]
+      },
+      {
+        "name": "audit_log",
+        "description": "Complete action audit trail",
+        "rls": true,
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "primary": true
+          },
+          {
+            "name": "user_id",
+            "type": "uuid",
+            "foreign_key": "users(id) ON DELETE SET NULL"
+          },
+          {
+            "name": "action",
+            "type": "text"
+          },
+          {
+            "name": "entity_type",
+            "type": "text"
+          },
+          {
+            "name": "entity_id",
+            "type": "uuid"
+          },
+          {
+            "name": "old_values",
+            "type": "jsonb"
+          },
+          {
+            "name": "new_values",
+            "type": "jsonb"
+          },
+          {
+            "name": "ip_address",
+            "type": "inet"
+          },
+          {
+            "name": "user_agent",
+            "type": "text"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          }
+        ]
+      },
+      {
+        "name": "quota_usage_history",
+        "description": "Historical quota usage for analytics",
+        "rls": true,
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "primary": true
+          },
+          {
+            "name": "user_id",
+            "type": "uuid",
+            "foreign_key": "users(id) ON DELETE CASCADE"
+          },
+          {
+            "name": "quota_type",
+            "type": "text",
+            "comment": "sync, ai_analysis, seo_submission"
+          },
+          {
+            "name": "operation",
+            "type": "text",
+            "comment": "increment, decrement, reset"
+          },
+          {
+            "name": "amount",
+            "type": "integer",
+            "default": 1
+          },
+          {
+            "name": "current_value",
+            "type": "integer"
+          },
+          {
+            "name": "max_value",
+            "type": "integer"
+          },
+          {
+            "name": "related_entity_type",
+            "type": "text"
+          },
+          {
+            "name": "related_entity_id",
+            "type": "uuid"
+          },
+          {
+            "name": "reason",
+            "type": "text"
+          },
+          {
+            "name": "billing_cycle_start",
+            "type": "timestamptz"
+          },
+          {
+            "name": "billing_cycle_end",
+            "type": "timestamptz"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          }
+        ]
+      },
+      {
+        "name": "cache_store",
+        "description": "Multi-purpose cache for external API data",
+        "columns": [
+          {
+            "name": "key",
+            "type": "text",
+            "primary": true
+          },
+          {
+            "name": "value",
+            "type": "jsonb"
+          },
+          {
+            "name": "category",
+            "type": "text",
+            "comment": "stripe_product, stripe_price, trending_keywords, ai_models"
+          },
+          {
+            "name": "expires_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz"
+          }
+        ]
+      }
+    ],
+    "junction_tables": [
+      {
+        "name": "user_role",
+        "description": "User role assignments (many-to-many)",
+        "rls": true,
+        "columns": [
+          {
+            "name": "user_id",
+            "type": "uuid",
+            "foreign_key": "users(id) ON DELETE CASCADE"
+          },
+          {
+            "name": "role",
+            "type": "app_role_enum",
+            "default": "user"
+          },
+          {
+            "name": "granted_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "granted_by",
+            "type": "uuid",
+            "foreign_key": "users(id)"
+          }
+        ],
+        "primary_key": [
+          "user_id",
+          "role"
+        ]
+      },
+      {
+        "name": "ai_suggestion_application",
+        "description": "Track which AI suggestion fields were applied",
+        "rls": true,
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "primary": true
+          },
+          {
+            "name": "suggestion_id",
+            "type": "uuid",
+            "foreign_key": "ai_suggestion(id) ON DELETE CASCADE"
+          },
+          {
+            "name": "field_name",
+            "type": "text",
+            "comment": "title, description, tags"
+          },
+          {
+            "name": "applied_value",
+            "type": "text"
+          },
+          {
+            "name": "applied_by_user_id",
+            "type": "uuid",
+            "foreign_key": "users(id)"
+          },
+          {
+            "name": "applied_at",
+            "type": "timestamptz"
+          }
+        ]
+      }
+    ],
+    "indexes": {
+      "composite": [
+        {
+          "table": "content_item",
+          "columns": [
+            "social_account_id",
+            "published_at DESC"
+          ],
+          "where": "deleted_at IS NULL"
+        },
+        {
+          "table": "content_item",
+          "columns": [
+            "platform_id",
+            "published_at DESC"
+          ],
+          "where": "deleted_at IS NULL"
+        },
+        {
+          "table": "platform_connection",
+          "columns": [
+            "user_id",
+            "platform_id"
+          ],
+          "where": "is_active = true"
+        },
+        {
+          "table": "social_account",
+          "columns": [
+            "user_id",
+            "platform_id",
+            "is_primary"
+          ],
+          "where": "deleted_at IS NULL"
+        },
+        {
+          "table": "subscription",
+          "columns": [
+            "user_id"
+          ]
+        },
+        {
+          "table": "subscription",
+          "columns": [
+            "tier_id"
+          ]
+        },
+        {
+          "table": "subscription",
+          "columns": [
+            "status_id"
+          ]
+        },
+        {
+          "table": "ai_suggestion",
+          "columns": [
+            "content_item_id",
+            "created_at DESC"
+          ]
+        },
+        {
+          "table": "ai_usage",
+          "columns": [
+            "user_id",
+            "billing_cycle_start",
+            "billing_cycle_end"
+          ]
+        },
+        {
+          "table": "seo_submission",
+          "columns": [
+            "content_item_id",
+            "created_at DESC"
+          ]
+        },
+        {
+          "table": "seo_submission",
+          "columns": [
+            "connection_id",
+            "submitted_at DESC"
+          ]
+        },
+        {
+          "table": "audit_log",
+          "columns": [
+            "user_id",
+            "created_at DESC"
+          ]
+        },
+        {
+          "table": "audit_log",
+          "columns": [
+            "entity_type",
+            "entity_id",
+            "created_at DESC"
+          ]
+        },
+        {
+          "table": "quota_usage_history",
+          "columns": [
+            "user_id",
+            "quota_type",
+            "billing_cycle_start",
+            "billing_cycle_end"
+          ]
+        }
+      ],
+      "partial": [
+        {
+          "table": "content_item",
+          "columns": [
+            "published_at DESC"
+          ],
+          "where": "deleted_at IS NULL AND visibility = 'public'"
+        },
+        {
+          "table": "social_account",
+          "columns": [
+            "user_id"
+          ],
+          "where": "deleted_at IS NULL"
+        },
+        {
+          "table": "social_account",
+          "columns": [
+            "next_sync_at"
+          ],
+          "where": "sync_mode = 'auto' AND deleted_at IS NULL"
+        },
+        {
+          "table": "platform_connection",
+          "columns": [
+            "token_expires_at"
+          ],
+          "where": "is_active = true AND token_expires_at < NOW() + INTERVAL '7 days'"
+        },
+        {
+          "table": "subscription",
+          "columns": [
+            "stripe_customer_id"
+          ],
+          "where": "stripe_customer_id IS NOT NULL"
+        },
+        {
+          "table": "subscription",
+          "columns": [
+            "cycle_end_date"
+          ],
+          "where": "is_auto_renew_enabled = true"
+        },
+        {
+          "table": "ai_suggestion",
+          "columns": [
+            "content_item_id",
+            "is_applied",
+            "created_at DESC"
+          ],
+          "where": "is_applied = false"
+        },
+        {
+          "table": "seo_submission",
+          "columns": [
+            "status",
+            "next_retry_at"
+          ],
+          "where": "status IN ('pending', 'failed')"
+        },
+        {
+          "table": "notification",
+          "columns": [
+            "user_id",
+            "created_at DESC"
+          ],
+          "where": "is_read = false AND (expires_at IS NULL OR expires_at > NOW())"
+        },
+        {
+          "table": "cache_store",
+          "columns": [
+            "category",
+            "expires_at"
+          ],
+          "where": "expires_at IS NULL OR expires_at > NOW()"
+        },
+        {
+          "table": "trending_keyword",
+          "columns": [
+            "platform_id",
+            "trending_score DESC"
+          ],
+          "where": "valid_until > NOW()"
+        }
+      ],
+      "gin": [
+        {
+          "table": "content_item",
+          "column": "search_vector"
+        },
+        {
+          "table": "content_item",
+          "column": "tags",
+          "where": "tags IS NOT NULL"
+        },
+        {
+          "table": "content_item",
+          "column": "hashtags",
+          "where": "hashtags IS NOT NULL"
+        },
+        {
+          "table": "ai_suggestion",
+          "column": "trending_keywords",
+          "where": "trending_keywords IS NOT NULL"
+        }
+      ],
+      "btree": [
+        {
+          "table": "users",
+          "column": "email"
+        },
+        {
+          "table": "seo_connection",
+          "columns": [
+            "user_id",
+            "search_engine_id"
+          ],
+          "where": "is_active = true"
+        },
+        {
+          "table": "ai_usage",
+          "columns": [
+            "provider_id",
+            "model_id",
+            "created_at DESC"
+          ]
+        },
+        {
+          "table": "seo_usage",
+          "columns": [
+            "search_engine_id",
+            "created_at DESC"
+          ]
+        },
+        {
+          "table": "subscription_tier",
+          "columns": [
+            "is_active",
+            "sort_order"
+          ]
+        },
+        {
+          "table": "notification",
+          "columns": [
+            "expires_at"
+          ],
+          "where": "expires_at IS NOT NULL"
+        },
+        {
+          "table": "cache_store",
+          "columns": [
+            "expires_at"
+          ],
+          "where": "expires_at IS NOT NULL"
+        },
+        {
+          "table": "trending_keyword",
+          "columns": [
+            "valid_until"
+          ],
+          "where": "valid_until > NOW()"
+        },
+        {
+          "table": "content_revision",
+          "columns": [
+            "content_item_id",
+            "created_at DESC"
+          ]
+        },
+        {
+          "table": "content_revision",
+          "columns": [
+            "user_id",
+            "created_at DESC"
+          ]
+        },
+        {
+          "table": "audit_log",
+          "columns": [
+            "action",
+            "created_at DESC"
+          ]
+        },
+        {
+          "table": "audit_log",
+          "columns": [
+            "created_at DESC"
+          ]
+        },
+        {
+          "table": "ai_suggestion",
+          "columns": [
+            "trending_score DESC",
+            "created_at DESC"
+          ],
+          "where": "trending_score IS NOT NULL"
+        },
+        {
+          "table": "ai_suggestion_application",
+          "columns": [
+            "suggestion_id"
+          ]
+        },
+        {
+          "table": "seo_submission",
+          "columns": [
+            "search_engine_id",
+            "submitted_at DESC"
+          ]
+        },
+        {
+          "table": "quota_usage_history",
+          "columns": [
+            "user_id",
+            "created_at DESC"
+          ]
+        }
+      ]
+    },
+    "functions": [
+      {
+        "name": "check_quota",
+        "parameters": [
+          {
+            "name": "p_user_id",
+            "type": "uuid"
+          },
+          {
+            "name": "p_quota_type",
+            "type": "text"
+          }
+        ],
+        "returns": "boolean",
+        "description": "Check if user has quota available for operation",
+        "security": "SECURITY DEFINER"
+      },
+      {
+        "name": "increment_quota",
+        "parameters": [
+          {
+            "name": "p_user_id",
+            "type": "uuid"
+          },
+          {
+            "name": "p_quota_type",
+            "type": "text"
+          },
+          {
+            "name": "p_amount",
+            "type": "integer",
+            "default": 1
+          },
+          {
+            "name": "p_related_entity_type",
+            "type": "text",
+            "default": null
+          },
+          {
+            "name": "p_related_entity_id",
+            "type": "uuid",
+            "default": null
+          }
+        ],
+        "returns": "void",
+        "description": "Increment quota usage and log to history",
+        "security": "SECURITY DEFINER"
+      },
+      {
+        "name": "decrement_quota",
+        "parameters": [
+          {
+            "name": "p_user_id",
+            "type": "uuid"
+          },
+          {
+            "name": "p_quota_type",
+            "type": "text"
+          },
+          {
+            "name": "p_amount",
+            "type": "integer",
+            "default": 1
+          },
+          {
+            "name": "p_reason",
+            "type": "text",
+            "default": null
+          }
+        ],
+        "returns": "void",
+        "description": "Decrement quota usage (refund/rollback) and log to history",
+        "security": "SECURITY DEFINER"
+      },
+      {
+        "name": "reset_quotas",
+        "parameters": [],
+        "returns": "void",
+        "description": "Reset all quotas at billing cycle boundary (called by pg_cron)",
+        "security": "SECURITY DEFINER"
+      },
+      {
+        "name": "has_role",
+        "parameters": [
+          {
+            "name": "p_user_id",
+            "type": "uuid"
+          },
+          {
+            "name": "p_role",
+            "type": "app_role_enum"
+          }
+        ],
+        "returns": "boolean",
+        "description": "Check if user has specific role",
+        "security": "SECURITY DEFINER"
+      },
+      {
+        "name": "prevent_account_deletion_with_content",
+        "returns": "trigger",
+        "description": "Prevent deletion of social accounts with active content"
+      },
+      {
+        "name": "update_updated_at_column",
+        "returns": "trigger",
+        "description": "Auto-update updated_at timestamp on row update"
+      }
+    ],
+    "triggers": [
+      {
+        "table": "users",
+        "event": "BEFORE UPDATE",
+        "function": "update_updated_at_column"
+      },
+      {
+        "table": "user_setting",
+        "event": "BEFORE UPDATE",
+        "function": "update_updated_at_column"
+      },
+      {
+        "table": "subscription",
+        "event": "BEFORE UPDATE",
+        "function": "update_updated_at_column"
+      },
+      {
+        "table": "platform_connection",
+        "event": "BEFORE UPDATE",
+        "function": "update_updated_at_column"
+      },
+      {
+        "table": "social_account",
+        "event": "BEFORE UPDATE",
+        "function": "update_updated_at_column"
+      },
+      {
+        "table": "content_item",
+        "event": "BEFORE UPDATE",
+        "function": "update_updated_at_column"
+      },
+      {
+        "table": "ai_suggestion",
+        "event": "BEFORE UPDATE",
+        "function": "update_updated_at_column"
+      },
+      {
+        "table": "seo_submission",
+        "event": "BEFORE UPDATE",
+        "function": "update_updated_at_column"
+      },
+      {
+        "table": "notification",
+        "event": "BEFORE UPDATE",
+        "function": "update_updated_at_column"
+      },
+      {
+        "table": "social_account",
+        "event": "BEFORE DELETE",
+        "function": "prevent_account_deletion_with_content"
+      }
+    ]
+  },
+  "authentication": {
+    "provider": "Supabase Auth",
+    "methods": [
+      "email",
+      "magic_link"
+    ],
+    "oauth_providers": [
+      {
+        "name": "google",
+        "purpose": "User login to StreamVibe platform",
+        "scopes": [
+          "email",
+          "profile"
+        ]
+      },
+      {
+        "name": "facebook",
+        "purpose": "User login to StreamVibe platform",
+        "scopes": [
+          "email",
+          "public_profile"
+        ]
+      }
+    ],
+    "platform_oauth": {
+      "note": "Separate from Supabase Auth - handled via Edge Functions and stored in Vault",
+      "providers": [
+        {
+          "platform": "youtube",
+          "oauth_url": "https://accounts.google.com/o/oauth2/v2/auth",
+          "token_url": "https://oauth2.googleapis.com/token",
+          "scopes": [
+            "https://www.googleapis.com/auth/youtube.readonly",
+            "https://www.googleapis.com/auth/youtube.force-ssl"
+          ]
+        },
+        {
+          "platform": "instagram",
+          "oauth_url": "https://api.instagram.com/oauth/authorize",
+          "token_url": "https://api.instagram.com/oauth/access_token",
+          "scopes": [
+            "user_profile",
+            "user_media"
+          ]
+        },
+        {
+          "platform": "tiktok",
+          "oauth_url": "https://www.tiktok.com/auth/authorize/",
+          "token_url": "https://open-api.tiktok.com/oauth/access_token/",
+          "scopes": [
+            "user.info.basic",
+            "video.list"
+          ]
+        },
+        {
+          "platform": "facebook",
+          "oauth_url": "https://www.facebook.com/v18.0/dialog/oauth",
+          "token_url": "https://graph.facebook.com/v18.0/oauth/access_token",
+          "scopes": [
+            "pages_show_list",
+            "pages_read_engagement"
+          ]
+        }
+      ]
+    },
+    "roles": [
+      {
+        "name": "user",
+        "description": "Regular platform user",
+        "default": true
+      },
+      {
+        "name": "admin",
+        "description": "Platform administrator with full access"
+      },
+      {
+        "name": "moderator",
+        "description": "Content moderator with limited admin access"
+      }
+    ],
+    "jwt_config": {
+      "secret": "env:JWT_SECRET",
+      "expiry": "3600",
+      "claims": [
+        "role",
+        "email"
+      ]
+    }
+  },
+  "authorization": {
+    "rls_enabled": true,
+    "policies": [
+      {
+        "table": "users",
+        "name": "users_select_own",
+        "operation": "SELECT",
+        "using": "auth.uid() = id"
+      },
+      {
+        "table": "users",
+        "name": "users_update_own",
+        "operation": "UPDATE",
+        "using": "auth.uid() = id"
+      },
+      {
+        "table": "users",
+        "name": "users_admin_all",
+        "operation": "ALL",
+        "using": "has_role(auth.uid(), 'admin')"
+      },
+      {
+        "table": "user_setting",
+        "name": "user_setting_all_own",
+        "operation": "ALL",
+        "using": "auth.uid() = user_id"
+      },
+      {
+        "table": "subscription",
+        "name": "subscription_select_own",
+        "operation": "SELECT",
+        "using": "auth.uid() = user_id"
+      },
+      {
+        "table": "subscription",
+        "name": "subscription_admin_all",
+        "operation": "ALL",
+        "using": "has_role(auth.uid(), 'admin')"
+      },
+      {
+        "table": "platform_connection",
+        "name": "platform_connection_all_own",
+        "operation": "ALL",
+        "using": "auth.uid() = user_id"
+      },
+      {
+        "table": "social_account",
+        "name": "social_account_all_own",
+        "operation": "ALL",
+        "using": "auth.uid() = user_id"
+      },
+      {
+        "table": "content_item",
+        "name": "content_item_all_own",
+        "operation": "ALL",
+        "using": "auth.uid() IN (SELECT user_id FROM social_account WHERE id = content_item.social_account_id)"
+      },
+      {
+        "table": "content_item",
+        "name": "content_item_select_public",
+        "operation": "SELECT",
+        "using": "visibility = 'public' AND deleted_at IS NULL"
+      },
+      {
+        "table": "content_revision",
+        "name": "content_revision_select_own",
+        "operation": "SELECT",
+        "using": "auth.uid() = user_id"
+      },
+      {
+        "table": "ai_suggestion",
+        "name": "ai_suggestion_all_own",
+        "operation": "ALL",
+        "using": "auth.uid() IN (SELECT sa.user_id FROM content_item ci JOIN social_account sa ON ci.social_account_id = sa.id WHERE ci.id = ai_suggestion.content_item_id)"
+      },
+      {
+        "table": "seo_submission",
+        "name": "seo_submission_all_own",
+        "operation": "ALL",
+        "using": "auth.uid() IN (SELECT user_id FROM seo_connection WHERE id = seo_submission.connection_id)"
+      },
+      {
+        "table": "notification",
+        "name": "notification_select_own",
+        "operation": "SELECT",
+        "using": "auth.uid() = user_id"
+      },
+      {
+        "table": "notification",
+        "name": "notification_update_own",
+        "operation": "UPDATE",
+        "using": "auth.uid() = user_id"
+      },
+      {
+        "table": "audit_log",
+        "name": "audit_log_select_own",
+        "operation": "SELECT",
+        "using": "auth.uid() = user_id"
+      },
+      {
+        "table": "audit_log",
+        "name": "audit_log_admin_all",
+        "operation": "ALL",
+        "using": "has_role(auth.uid(), 'admin')"
+      },
+      {
+        "table": "quota_usage_history",
+        "name": "quota_usage_history_select_own",
+        "operation": "SELECT",
+        "using": "auth.uid() = user_id"
+      }
+    ]
+  },
+  "secrets_management": {
+    "provider": "Supabase Vault (pgsodium)",
+    "secrets": [
+      {
+        "name_pattern": "oauth_token_{user_id}_{platform}",
+        "description": "Platform OAuth tokens (access_token, refresh_token, expires_at)",
+        "rotation_policy": "automatic_on_refresh",
+        "storage": "encrypted in Vault, reference in platform_connection.vault_secret_name"
+      },
+      {
+        "name_pattern": "seo_api_key_{user_id}_{search_engine}",
+        "description": "Search engine API credentials",
+        "rotation_policy": "manual_user_initiated",
+        "storage": "encrypted in Vault, reference in seo_connection.vault_secret_name"
+      },
+      {
+        "name": "stripe_webhook_secret",
+        "description": "Stripe webhook signing secret",
+        "rotation_policy": "manual_on_compromise",
+        "env_var": "STRIPE_WEBHOOK_SECRET"
+      },
+      {
+        "name": "openai_api_key",
+        "description": "OpenAI API key for AI suggestions",
+        "rotation_policy": "quarterly",
+        "env_var": "OPENAI_API_KEY"
+      },
+      {
+        "name": "anthropic_api_key",
+        "description": "Anthropic API key for AI suggestions",
+        "rotation_policy": "quarterly",
+        "env_var": "ANTHROPIC_API_KEY"
+      },
+      {
+        "name": "google_ai_api_key",
+        "description": "Google AI API key",
+        "rotation_policy": "quarterly",
+        "env_var": "GOOGLE_AI_API_KEY"
+      }
+    ],
+    "best_practices": [
+      "NEVER store OAuth tokens directly in database columns",
+      "Always use Vault references (vault_secret_name) in database",
+      "Edge Functions fetch secrets from Vault at runtime",
+      "Rotate secrets on compromise or expiry",
+      "Use environment variables for service API keys",
+      "Audit secret access via audit_log table"
+    ]
+  },
+  "storage": {
+    "enabled": false,
+    "buckets": [],
+    "note": "Storage not required - all content URLs are external platform links (YouTube, Instagram, etc.)"
+  },
+  "realtime": {
+    "enabled": false,
+    "channels": [],
+    "note": "Realtime not required for MVP - can be added later for live notifications"
+  },
+  "edge_functions": {
+    "runtime": "Deno",
+    "functions": [
+      {
+        "name": "oauth/initiate",
+        "path": "supabase/functions/oauth-initiate",
+        "description": "Generate OAuth authorization URL for platform connection",
+        "trigger": "HTTP POST",
+        "parameters": [
+          "platform",
+          "redirect_uri"
+        ],
+        "actions": [
+          "Validate platform exists",
+          "Generate state token",
+          "Build OAuth URL with scopes",
+          "Return authorization URL"
+        ],
+        "integrations": [
+          "platform OAuth APIs"
+        ]
+      },
+      {
+        "name": "oauth/callback",
+        "path": "supabase/functions/oauth-callback",
+        "description": "Handle OAuth callback, exchange code for tokens",
+        "trigger": "HTTP GET",
+        "parameters": [
+          "code",
+          "state",
+          "platform"
+        ],
+        "actions": [
+          "Validate state token",
+          "Exchange code for access_token",
+          "Store tokens in Vault",
+          "Create platform_connection record",
+          "Fetch platform user info",
+          "Update connection with platform details",
+          "Return success"
+        ],
+        "integrations": [
+          "Supabase Vault",
+          "platform OAuth APIs"
+        ],
+        "vault_operations": [
+          "create_secret"
+        ]
+      },
+      {
+        "name": "oauth/refresh",
+        "path": "supabase/functions/oauth-refresh",
+        "description": "Refresh expired OAuth tokens",
+        "trigger": "HTTP POST",
+        "parameters": [
+          "connection_id"
+        ],
+        "actions": [
+          "Fetch refresh_token from Vault",
+          "Call platform token refresh endpoint",
+          "Update Vault secret with new tokens",
+          "Update platform_connection.token_expires_at",
+          "Return success"
+        ],
+        "integrations": [
+          "Supabase Vault",
+          "platform OAuth APIs"
+        ],
+        "vault_operations": [
+          "get_secret",
+          "update_secret"
+        ]
+      },
+      {
+        "name": "oauth/revoke",
+        "path": "supabase/functions/oauth-revoke",
+        "description": "Revoke OAuth tokens and disconnect platform",
+        "trigger": "HTTP POST",
+        "parameters": [
+          "connection_id"
+        ],
+        "actions": [
+          "Fetch tokens from Vault",
+          "Call platform revoke endpoint",
+          "Delete Vault secret",
+          "Mark platform_connection as inactive",
+          "Create audit_log entry",
+          "Return success"
+        ],
+        "integrations": [
+          "Supabase Vault",
+          "platform OAuth APIs"
+        ],
+        "vault_operations": [
+          "get_secret",
+          "delete_secret"
+        ]
+      },
+      {
+        "name": "sync/content",
+        "path": "supabase/functions/sync-content",
+        "description": "Sync content from social platform",
+        "trigger": "HTTP POST",
+        "parameters": [
+          "social_account_id"
+        ],
+        "actions": [
+          "Check quota: check_quota(user_id, 'sync')",
+          "Fetch tokens from Vault",
+          "Call platform API (YouTube/Instagram/TikTok)",
+          "Parse response",
+          "Upsert content_item records",
+          "Increment quota: increment_quota(user_id, 'sync')",
+          "Update social_account.last_synced_at",
+          "Create notification on success/error",
+          "Create audit_log entry"
+        ],
+        "integrations": [
+          "Supabase Vault",
+          "YouTube API",
+          "Instagram API",
+          "TikTok API"
+        ],
+        "vault_operations": [
+          "get_secret"
+        ]
+      },
+      {
+        "name": "sync/schedule",
+        "path": "supabase/functions/sync-schedule",
+        "description": "Schedule next auto-sync for account",
+        "trigger": "HTTP POST",
+        "parameters": [
+          "social_account_id",
+          "frequency_hours"
+        ],
+        "actions": [
+          "Update social_account.sync_mode = 'auto'",
+          "Calculate next_sync_at",
+          "Update social_account.next_sync_at",
+          "Return success"
+        ]
+      },
+      {
+        "name": "billing/webhook",
+        "path": "supabase/functions/billing-webhook",
+        "description": "Handle Stripe webhook events",
+        "trigger": "Stripe webhook",
+        "parameters": [
+          "event"
+        ],
+        "actions": [
+          "Verify webhook signature",
+          "Parse event type",
+          "Handle subscription.created",
+          "Handle subscription.updated",
+          "Handle subscription.deleted",
+          "Handle invoice.paid",
+          "Handle invoice.payment_failed",
+          "Update subscription record",
+          "Create notification",
+          "Create audit_log entry"
+        ],
+        "integrations": [
+          "Stripe"
+        ],
+        "events": [
+          "customer.subscription.created",
+          "customer.subscription.updated",
+          "customer.subscription.deleted",
+          "invoice.paid",
+          "invoice.payment_failed"
+        ]
+      },
+      {
+        "name": "billing/create-checkout",
+        "path": "supabase/functions/billing-create-checkout",
+        "description": "Create Stripe Checkout session",
+        "trigger": "HTTP POST",
+        "parameters": [
+          "tier_slug",
+          "success_url",
+          "cancel_url"
+        ],
+        "actions": [
+          "Get subscription_tier details",
+          "Create or retrieve Stripe customer",
+          "Create Checkout session",
+          "Return session URL"
+        ],
+        "integrations": [
+          "Stripe"
+        ]
+      },
+      {
+        "name": "billing/create-portal",
+        "path": "supabase/functions/billing-create-portal",
+        "description": "Create Stripe Customer Portal session",
+        "trigger": "HTTP POST",
+        "parameters": [
+          "return_url"
+        ],
+        "actions": [
+          "Get stripe_customer_id from subscription",
+          "Create portal session",
+          "Return portal URL"
+        ],
+        "integrations": [
+          "Stripe"
+        ]
+      },
+      {
+        "name": "billing/usage-report",
+        "path": "supabase/functions/billing-usage-report",
+        "description": "Report metered usage to Stripe",
+        "trigger": "HTTP POST or pg_cron",
+        "parameters": [
+          "user_id"
+        ],
+        "actions": [
+          "Get subscription usage",
+          "Calculate overages",
+          "Report to Stripe Usage Records API",
+          "Create audit_log entry"
+        ],
+        "integrations": [
+          "Stripe"
+        ]
+      },
+      {
+        "name": "ai/analyze",
+        "path": "supabase/functions/ai-analyze",
+        "description": "Analyze content with AI, generate suggestions",
+        "trigger": "HTTP POST",
+        "parameters": [
+          "content_item_id"
+        ],
+        "actions": [
+          "Check quota: check_quota(user_id, 'ai_analysis')",
+          "Fetch content_item details",
+          "Get user_ai_setting preferences",
+          "Build AI prompt",
+          "Call AI provider API (OpenAI/Anthropic/Google)",
+          "Parse AI response",
+          "Calculate scores (trending, seo, readability)",
+          "Insert ai_suggestion record",
+          "Track ai_usage (tokens, cost)",
+          "Increment quota: increment_quota(user_id, 'ai_analysis')",
+          "Create notification",
+          "Create audit_log entry"
+        ],
+        "integrations": [
+          "OpenAI",
+          "Anthropic",
+          "Google AI"
+        ],
+        "ai_operations": [
+          "chat_completion",
+          "structured_output"
+        ]
+      },
+      {
+        "name": "ai/apply-suggestions",
+        "path": "supabase/functions/ai-apply-suggestions",
+        "description": "Apply AI suggestions to content",
+        "trigger": "HTTP POST",
+        "parameters": [
+          "suggestion_id",
+          "fields_to_apply"
+        ],
+        "actions": [
+          "Fetch ai_suggestion",
+          "Fetch content_item",
+          "For each field: update content_item, create content_revision, insert ai_suggestion_application",
+          "Mark ai_suggestion.is_applied = true",
+          "Create notification",
+          "Create audit_log entry"
+        ]
+      },
+      {
+        "name": "ai/get-trending",
+        "path": "supabase/functions/ai-get-trending",
+        "description": "Fetch trending keywords for platform",
+        "trigger": "HTTP GET",
+        "parameters": [
+          "platform_id",
+          "category"
+        ],
+        "actions": [
+          "Check cache_store for trending keywords",
+          "If expired, fetch from external API",
+          "Update cache_store and trending_keyword table",
+          "Return trending keywords"
+        ],
+        "integrations": [
+          "Google Trends",
+          "TikTok Creative Center",
+          "YouTube Trending"
+        ]
+      },
+      {
+        "name": "seo/submit",
+        "path": "supabase/functions/seo-submit",
+        "description": "Submit URL to search engines",
+        "trigger": "HTTP POST",
+        "parameters": [
+          "content_item_id",
+          "search_engine_ids"
+        ],
+        "actions": [
+          "Check quota: check_quota(user_id, 'seo_submission')",
+          "Fetch content_item URL",
+          "For each search engine:",
+          "  - Fetch credentials from Vault",
+          "  - Call search engine API",
+          "  - Insert seo_submission record",
+          "  - Track seo_usage",
+          "Increment quota: increment_quota(user_id, 'seo_submission')",
+          "Create notification",
+          "Create audit_log entry"
+        ],
+        "integrations": [
+          "Google Search Console",
+          "Bing Webmaster",
+          "Yandex",
+          "IndexNow"
+        ],
+        "vault_operations": [
+          "get_secret"
+        ]
+      },
+      {
+        "name": "seo/check-status",
+        "path": "supabase/functions/seo-check-status",
+        "description": "Check indexing status of submitted URLs",
+        "trigger": "HTTP POST or pg_cron",
+        "parameters": [
+          "submission_id"
+        ],
+        "actions": [
+          "Fetch seo_submission",
+          "Fetch credentials from Vault",
+          "Call search engine status API",
+          "Update seo_submission.status",
+          "If indexed, create notification",
+          "Create audit_log entry"
+        ],
+        "integrations": [
+          "Google Search Console",
+          "Bing Webmaster"
+        ],
+        "vault_operations": [
+          "get_secret"
+        ]
+      },
+      {
+        "name": "seo/bulk-submit",
+        "path": "supabase/functions/seo-bulk-submit",
+        "description": "Batch URL submission",
+        "trigger": "HTTP POST",
+        "parameters": [
+          "content_item_ids",
+          "search_engine_id"
+        ],
+        "actions": [
+          "Check quota for batch",
+          "Fetch all URLs",
+          "Submit batch to search engine",
+          "Create multiple seo_submission records",
+          "Track seo_usage",
+          "Increment quota for count",
+          "Create notification"
+        ],
+        "integrations": [
+          "IndexNow"
+        ]
+      }
+    ]
+  },
+  "integrations": {
+    "payment": {
+      "provider": "Stripe",
+      "mode": "subscription + metered_billing",
+      "webhooks": [
+        {
+          "event": "customer.subscription.created",
+          "handler": "billing/webhook",
+          "action": "Create subscription record"
+        },
+        {
+          "event": "customer.subscription.updated",
+          "handler": "billing/webhook",
+          "action": "Update subscription tier/status"
+        },
+        {
+          "event": "customer.subscription.deleted",
+          "handler": "billing/webhook",
+          "action": "Mark subscription canceled"
+        },
+        {
+          "event": "invoice.paid",
+          "handler": "billing/webhook",
+          "action": "Update cycle dates, reset quotas"
+        },
+        {
+          "event": "invoice.payment_failed",
+          "handler": "billing/webhook",
+          "action": "Mark subscription past_due"
+        }
+      ],
+      "products": [
+        {
+          "name": "Free",
+          "price": "$0/month",
+          "stripe_price_id": "env:STRIPE_PRICE_FREE",
+          "stripe_product_id": "env:STRIPE_PRODUCT_FREE"
+        },
+        {
+          "name": "Basic",
+          "price": "$19/month",
+          "stripe_price_id": "env:STRIPE_PRICE_BASIC",
+          "stripe_product_id": "env:STRIPE_PRODUCT_BASIC"
+        },
+        {
+          "name": "Premium",
+          "price": "$49/month",
+          "stripe_price_id": "env:STRIPE_PRICE_PREMIUM",
+          "stripe_product_id": "env:STRIPE_PRODUCT_PREMIUM"
+        }
+      ],
+      "metered_items": [
+        {
+          "name": "Extra Syncs",
+          "stripe_price_id": "env:STRIPE_PRICE_OVERAGE_SYNC",
+          "unit": "sync",
+          "price": "$0.10 per sync"
+        },
+        {
+          "name": "Extra AI Analyses",
+          "stripe_price_id": "env:STRIPE_PRICE_OVERAGE_AI",
+          "unit": "analysis",
+          "price": "$0.05 per analysis"
+        },
+        {
+          "name": "Extra SEO Submissions",
+          "stripe_price_id": "env:STRIPE_PRICE_OVERAGE_SEO",
+          "unit": "submission",
+          "price": "$0.03 per submission"
+        }
+      ]
+    },
+    "ai_providers": [
+      {
+        "name": "OpenAI",
+        "base_url": "https://api.openai.com/v1",
+        "models": [
+          {
+            "name": "gpt-4o",
+            "use_case": "High-quality content analysis",
+            "input_cost": "$2.50 per 1M tokens",
+            "output_cost": "$10.00 per 1M tokens"
+          },
+          {
+            "name": "gpt-4o-mini",
+            "use_case": "Fast, cost-effective analysis",
+            "input_cost": "$0.15 per 1M tokens",
+            "output_cost": "$0.60 per 1M tokens"
+          }
+        ],
+        "api_key": "env:OPENAI_API_KEY"
+      },
+      {
+        "name": "Anthropic",
+        "base_url": "https://api.anthropic.com/v1",
+        "models": [
+          {
+            "name": "claude-3-5-sonnet-20241022",
+            "use_case": "Detailed content research",
+            "input_cost": "$3.00 per 1M tokens",
+            "output_cost": "$15.00 per 1M tokens"
+          }
+        ],
+        "api_key": "env:ANTHROPIC_API_KEY"
+      },
+      {
+        "name": "Google AI",
+        "base_url": "https://generativelanguage.googleapis.com/v1",
+        "models": [
+          {
+            "name": "gemini-1.5-pro",
+            "use_case": "Multimodal content analysis",
+            "input_cost": "$1.25 per 1M tokens",
+            "output_cost": "$5.00 per 1M tokens"
+          }
+        ],
+        "api_key": "env:GOOGLE_AI_API_KEY"
+      },
+      {
+        "name": "Local (Ollama)",
+        "base_url": "http://localhost:11434",
+        "models": [
+          {
+            "name": "llama3.2",
+            "use_case": "Privacy-focused local processing",
+            "cost": "Free (self-hosted)"
+          }
+        ],
+        "api_key": null
+      }
+    ],
+    "seo_engines": [
+      {
+        "name": "Google Search Console",
+        "api_endpoint": "https://indexing.googleapis.com/v3",
+        "auth": "OAuth 2.0",
+        "methods": [
+          "URL Inspection API",
+          "Indexing API"
+        ],
+        "supports_indexnow": false,
+        "credentials": "vault:seo_api_key_{user_id}_google"
+      },
+      {
+        "name": "Bing Webmaster Tools",
+        "api_endpoint": "https://ssl.bing.com/webmaster/api.svc/json",
+        "auth": "API Key",
+        "methods": [
+          "Submit URL",
+          "IndexNow"
+        ],
+        "supports_indexnow": true,
+        "credentials": "vault:seo_api_key_{user_id}_bing"
+      },
+      {
+        "name": "Yandex Webmaster",
+        "api_endpoint": "https://api.webmaster.yandex.net/v4",
+        "auth": "OAuth 2.0",
+        "methods": [
+          "Indexing API"
+        ],
+        "supports_indexnow": false,
+        "credentials": "vault:seo_api_key_{user_id}_yandex"
+      },
+      {
+        "name": "IndexNow Protocol",
+        "api_endpoint": "https://api.indexnow.org",
+        "auth": "API Key",
+        "methods": [
+          "Instant indexing notification"
+        ],
+        "supports_indexnow": true,
+        "note": "Notifies Bing, Yandex, and other search engines simultaneously"
+      }
+    ],
+    "platform_apis": [
+      {
+        "platform": "YouTube",
+        "api": "YouTube Data API v3",
+        "base_url": "https://www.googleapis.com/youtube/v3",
+        "endpoints": {
+          "channels": "/channels",
+          "videos": "/videos",
+          "playlistItems": "/playlistItems"
+        },
+        "rate_limits": "10,000 quota units per day"
+      },
+      {
+        "platform": "Instagram",
+        "api": "Instagram Basic Display API / Graph API",
+        "base_url": "https://graph.instagram.com",
+        "endpoints": {
+          "user": "/me",
+          "media": "/me/media"
+        },
+        "rate_limits": "200 calls per hour per user"
+      },
+      {
+        "platform": "TikTok",
+        "api": "TikTok API",
+        "base_url": "https://open.tiktokapis.com/v2",
+        "endpoints": {
+          "user_info": "/user/info/",
+          "video_list": "/video/list/"
+        },
+        "rate_limits": "Varies by endpoint"
+      },
+      {
+        "platform": "Facebook",
+        "api": "Facebook Graph API",
+        "base_url": "https://graph.facebook.com/v18.0",
+        "endpoints": {
+          "pages": "/me/accounts",
+          "posts": "/{page-id}/posts"
+        },
+        "rate_limits": "200 calls per hour per user"
+      }
+    ]
+  },
+  "scheduled_jobs": {
+    "provider": "pg_cron",
+    "jobs": [
+      {
+        "name": "reset-monthly-quotas",
+        "schedule": "0 0 1 * *",
+        "description": "Reset all subscription quotas on first day of month",
+        "command": "SELECT public.reset_quotas()"
+      },
+      {
+        "name": "cleanup-expired-notifications",
+        "schedule": "0 2 * * *",
+        "description": "Daily cleanup of expired notifications at 2 AM",
+        "command": "DELETE FROM public.notification WHERE expires_at < NOW()"
+      },
+      {
+        "name": "cleanup-expired-cache",
+        "schedule": "0 3 * * *",
+        "description": "Daily cleanup of expired cache entries at 3 AM",
+        "command": "DELETE FROM public.cache_store WHERE expires_at < NOW()"
+      },
+      {
+        "name": "verify-platform-connections",
+        "schedule": "0 */6 * * *",
+        "description": "Check for expired OAuth tokens every 6 hours",
+        "command": "UPDATE public.platform_connection SET is_active = false, last_error = 'Token expired', updated_at = NOW() WHERE token_expires_at < NOW() AND is_active = true"
+      },
+      {
+        "name": "auto-sync-accounts",
+        "schedule": "0 * * * *",
+        "description": "Trigger auto-sync for accounts due for sync",
+        "command": "SELECT id FROM public.social_account WHERE sync_mode = 'auto' AND next_sync_at <= NOW() AND deleted_at IS NULL",
+        "note": "Edge Function should be called for each returned ID"
+      },
+      {
+        "name": "check-seo-indexing-status",
+        "schedule": "0 */12 * * *",
+        "description": "Check indexing status of pending SEO submissions every 12 hours",
+        "command": "SELECT id FROM public.seo_submission WHERE status IN ('pending', 'submitted') AND status_checked_at < NOW() - INTERVAL '12 hours'",
+        "note": "Edge Function should be called for each returned ID"
+      },
+      {
+        "name": "report-stripe-usage",
+        "schedule": "0 0 * * *",
+        "description": "Daily report of metered usage to Stripe",
+        "command": "SELECT DISTINCT user_id FROM public.subscription WHERE stripe_subscription_id IS NOT NULL",
+        "note": "Edge Function billing/usage-report should be called for each user"
+      }
+    ]
+  },
+  "caching": {
+    "strategy": "multi_layer",
+    "layers": [
+      {
+        "name": "memory",
+        "provider": "Edge Function runtime memory",
+        "ttl": "5 minutes",
+        "use_cases": [
+          "Frequently accessed lookup tables",
+          "User session data"
+        ]
+      },
+      {
+        "name": "database",
+        "provider": "cache_store table",
+        "ttl": "varies by category",
+        "use_cases": [
+          "Stripe products/prices",
+          "Trending keywords",
+          "AI model pricing"
+        ]
+      }
+    ],
+    "ttl_defaults": {
+      "stripe_product": "1 hour",
+      "stripe_price": "1 hour",
+      "trending_keywords": "6 hours",
+      "ai_models": "24 hours",
+      "platform_rate_limits": "5 minutes"
+    },
+    "cache_categories": [
+      {
+        "category": "stripe_product",
+        "description": "Stripe product data to avoid frequent API calls",
+        "ttl": "3600",
+        "invalidation": "manual on Stripe webhook"
+      },
+      {
+        "category": "stripe_price",
+        "description": "Stripe pricing data",
+        "ttl": "3600",
+        "invalidation": "manual on Stripe webhook"
+      },
+      {
+        "category": "trending_keywords",
+        "description": "Trending keywords from external APIs",
+        "ttl": "21600",
+        "invalidation": "automatic on expiry"
+      },
+      {
+        "category": "ai_models",
+        "description": "AI model availability and pricing",
+        "ttl": "86400",
+        "invalidation": "automatic on expiry"
+      }
+    ]
+  },
+  "monitoring": {
+    "logging": {
+      "provider": "Supabase Logs",
+      "levels": [
+        "error",
+        "warn",
+        "info",
+        "debug"
+      ],
+      "tables_to_monitor": [
+        "audit_log (all actions)",
+        "quota_usage_history (quota tracking)",
+        "ai_usage (AI costs)",
+        "seo_usage (SEO API usage)"
+      ]
+    },
+    "error_tracking": {
+      "provider": "Supabase Edge Function logs + audit_log",
+      "critical_errors": [
+        "OAuth token refresh failures",
+        "Stripe webhook verification failures",
+        "Quota exceeded without proper handling",
+        "AI API errors",
+        "SEO submission failures"
+      ]
+    },
+    "performance": {
+      "metrics": [
+        "Query execution time (pg_stat_statements)",
+        "Index usage (pg_stat_user_indexes)",
+        "Edge Function execution time",
+        "API response times",
+        "Cache hit rates"
+      ],
+      "alerts": [
+        "Query execution > 1 second",
+        "Failed webhook deliveries",
+        "High quota usage (>80%)",
+        "Token expiry < 7 days"
+      ]
+    }
+  },
+  "deployment": {
+    "environments": [
+      {
+        "name": "development",
+        "supabase_project": "local",
+        "command": "supabase start",
+        "note": "Local Supabase instance with Docker"
+      },
+      {
+        "name": "staging",
+        "supabase_project": "staging-project-id",
+        "command": "supabase link --project-ref staging-project-id",
+        "note": "Staging environment for testing"
+      },
+      {
+        "name": "production",
+        "supabase_project": "prod-project-id",
+        "command": "supabase link --project-ref prod-project-id",
+        "note": "Production environment"
+      }
+    ],
+    "ci_cd": {
+      "provider": "GitHub Actions",
+      "workflows": [
+        {
+          "name": "Test",
+          "trigger": "pull_request",
+          "steps": [
+            "Start local Supabase",
+            "Run database migrations",
+            "Run tests",
+            "Generate coverage report"
+          ]
+        },
+        {
+          "name": "Deploy Staging",
+          "trigger": "push to develop",
+          "steps": [
+            "Link to staging project",
+            "Push database migrations",
+            "Deploy Edge Functions",
+            "Run smoke tests"
+          ]
+        },
+        {
+          "name": "Deploy Production",
+          "trigger": "push to main",
+          "steps": [
+            "Link to production project",
+            "Create database backup",
+            "Push database migrations",
+            "Deploy Edge Functions",
+            "Run health checks",
+            "Notify team"
+          ]
+        }
+      ]
+    },
+    "migrations": {
+      "tool": "Supabase CLI",
+      "directory": "supabase/migrations",
+      "naming": "YYYYMMDDHHMMSS_description.sql",
+      "strategy": "forward_only",
+      "notes": [
+        "Never edit existing migrations",
+        "Always test migrations on staging first",
+        "Use transactions for data migrations",
+        "Document breaking changes"
+      ]
+    }
+  },
+  "cli_commands": {
+    "setup": [
+      {
+        "command": "supabase init",
+        "description": "Initialize Supabase project locally"
+      },
+      {
+        "command": "supabase start",
+        "description": "Start local Supabase instance (Docker required)"
+      },
+      {
+        "command": "supabase db reset",
+        "description": "Reset database to clean state with all migrations"
+      },
+      {
+        "command": "supabase link --project-ref <project-id>",
+        "description": "Link to remote Supabase project"
+      }
+    ],
+    "development": [
+      {
+        "command": "supabase db push",
+        "description": "Push local schema changes to remote"
+      },
+      {
+        "command": "supabase db diff",
+        "description": "Show differences between local and remote schema"
+      },
+      {
+        "command": "supabase migration new <name>",
+        "description": "Create new migration file"
+      },
+      {
+        "command": "supabase functions new <name>",
+        "description": "Create new Edge Function"
+      },
+      {
+        "command": "supabase functions serve",
+        "description": "Run Edge Functions locally"
+      },
+      {
+        "command": "supabase db test",
+        "description": "Run database tests"
+      }
+    ],
+    "deployment": [
+      {
+        "command": "supabase db push --dry-run",
+        "description": "Preview migration without executing"
+      },
+      {
+        "command": "supabase db push",
+        "description": "Apply migrations to linked project"
+      },
+      {
+        "command": "supabase functions deploy <name>",
+        "description": "Deploy specific Edge Function"
+      },
+      {
+        "command": "supabase functions deploy --no-verify-jwt",
+        "description": "Deploy function with disabled JWT verification (for webhooks)"
+      },
+      {
+        "command": "supabase secrets set KEY=value",
+        "description": "Set environment variable for Edge Functions"
+      }
+    ],
+    "maintenance": [
+      {
+        "command": "supabase db dump -f backup.sql",
+        "description": "Create database backup"
+      },
+      {
+        "command": "supabase db reset --linked",
+        "description": "Reset linked remote database (DANGEROUS)"
+      },
+      {
+        "command": "supabase functions delete <name>",
+        "description": "Delete Edge Function"
+      },
+      {
+        "command": "supabase migration repair <version>",
+        "description": "Mark failed migration as completed"
+      },
+      {
+        "command": "supabase inspect db calls",
+        "description": "Show most expensive database queries"
+      },
+      {
+        "command": "supabase inspect db cache-hit",
+        "description": "Show cache hit rates"
+      }
+    ]
+  },
+  "testing": {
+    "unit": {
+      "framework": "pgTAP",
+      "directory": "supabase/tests",
+      "coverage": [
+        "Database functions (check_quota, increment_quota, etc.)",
+        "Triggers (update_updated_at_column, prevent_account_deletion)",
+        "RLS policies (test with different auth contexts)"
+      ]
+    },
+    "integration": {
+      "framework": "Deno Test",
+      "directory": "tests/integration",
+      "coverage": [
+        "OAuth flow (initiate → callback → refresh)",
+        "Content sync (with mocked platform APIs)",
+        "AI analysis (with mocked AI APIs)",
+        "SEO submission (with mocked search engine APIs)",
+        "Stripe webhooks (with mocked Stripe events)"
+      ]
+    },
+    "e2e": {
+      "framework": "Playwright",
+      "directory": "tests/e2e",
+      "scenarios": [
+        "User signup → connect platform → sync content",
+        "Analyze content with AI → apply suggestions",
+        "Submit content to SEO → check status",
+        "Upgrade subscription → exceed quota → pay overage"
+      ]
+    },
+    "load": {
+      "tool": "k6",
+      "scenarios": [
+        "Concurrent content syncs (100 users)",
+        "Burst AI analysis requests (1000 requests/min)",
+        "SEO bulk submissions (10,000 URLs)",
+        "Dashboard queries under load"
+      ],
+      "performance_targets": {
+        "api_response_time_p95": "< 500ms",
+        "database_query_time_p95": "< 100ms",
+        "edge_function_cold_start": "< 2s",
+        "edge_function_warm": "< 200ms"
+      }
+    }
+  }
+}
