@@ -113,7 +113,7 @@ erDiagram
     }
     
     user_setting {
-        uuid user_id PK FK
+        uuid user_id PK "FK to users"
         boolean is_email_notifications_enabled
         boolean is_push_notifications_enabled
         boolean is_weekly_digest_enabled
@@ -130,7 +130,7 @@ erDiagram
     
     user_role {
         uuid id PK
-        uuid user_id FK
+        uuid user_id FK "FK to users"
         app_role_enum role "user, admin, moderator"
         text granted_by
         timestamptz granted_at
@@ -144,9 +144,9 @@ erDiagram
     
     subscription {
         uuid id PK
-        uuid user_id UK FK
-        uuid tier_id FK
-        uuid status_id FK
+        uuid user_id UK "FK to users"
+        uuid tier_id FK "FK to subscription_tier"
+        uuid status_id FK "FK to subscription_status"
         integer syncs_used
         integer ai_analyses_used
         integer seo_submissions_used
@@ -167,7 +167,7 @@ erDiagram
     
     quota_usage_history {
         uuid id PK
-        uuid user_id FK
+        uuid user_id FK "FK to users"
         text quota_type "sync, ai_analysis, seo_submission"
         text operation "increment, decrement, reset"
         integer amount
@@ -187,8 +187,8 @@ erDiagram
     
     platform_connection {
         uuid id PK
-        uuid user_id FK
-        uuid platform_id FK
+        uuid user_id FK "FK to users"
+        uuid platform_id FK "FK to platform"
         text vault_secret_name UK "Vault reference only"
         text[] scopes
         timestamptz token_expires_at
@@ -206,10 +206,10 @@ erDiagram
     
     social_account {
         uuid id PK
-        uuid user_id FK "Denormalized"
-        uuid connection_id FK
-        uuid platform_id FK
-        uuid status_id FK
+        uuid user_id FK "FK to users - Denormalized"
+        uuid connection_id FK "FK to platform_connection"
+        uuid platform_id FK "FK to platform"
+        uuid status_id FK "FK to account_status"
         text account_name
         text account_url
         text description
@@ -229,9 +229,9 @@ erDiagram
     
     content_item {
         uuid id PK
-        uuid social_account_id FK
-        uuid platform_id FK "Denormalized"
-        uuid content_type_id FK
+        uuid social_account_id FK "FK to social_account"
+        uuid platform_id FK "FK to platform - Denormalized"
+        uuid content_type_id FK "FK to content_type"
         text platform_content_id
         text platform_url
         text title
@@ -258,8 +258,8 @@ erDiagram
     
     content_revision {
         uuid id PK
-        uuid content_item_id FK
-        uuid user_id FK
+        uuid content_item_id FK "FK to content_item"
+        uuid user_id FK "FK to users"
         text field_name
         text old_value
         text new_value
@@ -274,7 +274,7 @@ erDiagram
     
     ai_model {
         uuid id PK
-        uuid provider_id FK
+        uuid provider_id FK "FK to ai_provider"
         text model_name
         text display_name
         text[] capabilities
@@ -287,9 +287,9 @@ erDiagram
     }
     
     user_ai_setting {
-        uuid user_id PK FK
-        uuid preferred_provider_id FK
-        uuid preferred_model_id FK
+        uuid user_id PK "FK to users"
+        uuid preferred_provider_id FK "FK to ai_provider"
+        uuid preferred_model_id FK "FK to ai_model"
         text tone "professional, casual, enthusiastic"
         text language
         timestamptz created_at
@@ -298,9 +298,9 @@ erDiagram
     
     ai_suggestion {
         uuid id PK
-        uuid content_item_id FK
-        uuid provider_id FK
-        uuid model_id FK
+        uuid content_item_id FK "FK to content_item"
+        uuid provider_id FK "FK to ai_provider"
+        uuid model_id FK "FK to ai_model"
         text[] suggested_titles
         text suggested_description
         text[] suggested_tags
@@ -327,19 +327,19 @@ erDiagram
     
     ai_suggestion_application {
         uuid id PK
-        uuid suggestion_id FK
+        uuid suggestion_id FK "FK to ai_suggestion"
         text applied_field "title, description, tags"
         text applied_value
-        uuid applied_by_user_id FK
+        uuid applied_by_user_id FK "FK to users"
         timestamptz applied_at
     }
     
     ai_usage {
         uuid id PK
-        uuid user_id FK
-        uuid provider_id FK
-        uuid model_id FK
-        uuid content_item_id FK
+        uuid user_id FK "FK to users"
+        uuid provider_id FK "FK to ai_provider"
+        uuid model_id FK "FK to ai_model"
+        uuid content_item_id FK "FK to content_item"
         text operation_type
         integer prompt_tokens
         integer completion_tokens
@@ -353,7 +353,7 @@ erDiagram
     
     trending_keyword {
         uuid id PK
-        uuid platform_id FK
+        uuid platform_id FK "FK to platform"
         text keyword
         text category
         decimal trending_score
@@ -373,8 +373,8 @@ erDiagram
     
     seo_connection {
         uuid id PK
-        uuid user_id FK
-        uuid search_engine_id FK
+        uuid user_id FK "FK to users"
+        uuid search_engine_id FK "FK to search_engine"
         text vault_secret_name "Vault reference"
         text site_url
         boolean is_active
@@ -387,9 +387,9 @@ erDiagram
     
     seo_submission {
         uuid id PK
-        uuid content_item_id FK
-        uuid connection_id FK
-        uuid search_engine_id FK
+        uuid content_item_id FK "FK to content_item"
+        uuid connection_id FK "FK to seo_connection"
+        uuid search_engine_id FK "FK to search_engine"
         text submitted_url
         text submission_type
         text submission_method
@@ -411,9 +411,9 @@ erDiagram
     
     seo_usage {
         uuid id PK
-        uuid user_id FK
-        uuid search_engine_id FK
-        uuid content_item_id FK
+        uuid user_id FK "FK to users"
+        uuid search_engine_id FK "FK to search_engine"
+        uuid content_item_id FK "FK to content_item"
         text operation_type
         integer urls_count
         timestamptz billing_cycle_start
@@ -427,7 +427,7 @@ erDiagram
     
     notification {
         uuid id PK
-        uuid user_id FK
+        uuid user_id FK "FK to users"
         notification_type_enum type
         text title
         text message
@@ -445,7 +445,7 @@ erDiagram
     
     audit_log {
         uuid id PK
-        uuid user_id FK
+        uuid user_id FK "FK to users"
         text action
         text entity_type
         uuid entity_id
