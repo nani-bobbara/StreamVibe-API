@@ -1,54 +1,75 @@
-# Archive - Brainstorming Documents
+# Archive
 
-This folder contains all the brainstorming and design iteration documents that led to the final v3 schema and architecture.
+This folder contains historical design documents and brainstorming materials from the initial development phase. These documents are kept for reference but may contain outdated information.
 
-## 📁 Contents
+## 📚 Archived Documents
 
-### SQL Schema Evolution
-- `StreamVibe.sql` - Initial draft schema
-- `StreamVibe_v2_improved.sql` - Second iteration
-- `StreamVibe_v3_production.sql` - Final production schema (now in `database/schema.sql`)
-- `STRIPE_MINIMAL_SCHEMA.sql` - Stripe integration exploration
+### Authentication & OAuth
+- **AUTHENTICATION_ARCHITECTURE.md** - Initial auth design (superseded by INTEGRATIONS.md)
+- **OAUTH_FLOW_DIAGRAM.md** - OAuth flow diagrams (merged into INTEGRATIONS.md)
+- **OAUTH_QUICK_REFERENCE.md** - Quick reference (merged into INTEGRATIONS.md)
+- **USER_FLOW_IMPLEMENTATION.md** - User flow specs (superseded by BACKEND_IMPLEMENTATION.md)
 
-### Architecture Documents
-- `ARCHITECTURE_DECISIONS.md` - Core design principles and rationale
-- `AUTHENTICATION_ARCHITECTURE.md` - OAuth flow details
-- `STRIPE_INTEGRATION.md` - Billing integration guide
-- `STRIPE_CACHING_STRATEGY.md` - Caching approach for Stripe data
-- `SEO_INDEXING_INTEGRATION.md` - SEO automation details
+### Database Design
+- **SCHEMA_IMPROVEMENTS.md** - Initial schema ideas
+- **SCHEMA_REFACTORING_ANALYSIS.md** - Schema refactoring proposals
+- **SCHEMA_SUMMARY.md** - Early schema documentation
+- **StreamVibe.sql** - Original schema v1
+- **StreamVibe_v2_improved.sql** - Schema v2
+- **StreamVibe_v3_production.sql** - Schema v3 (current version in database/schema.sql)
 
-### Schema Analysis
-- `SCHEMA_SUMMARY.md` - Complete v3 schema overview
-- `SCHEMA_REFACTORING_ANALYSIS.md` - Design decisions and improvements
-- `SCHEMA_IMPROVEMENTS.md` - Optimization notes
-- `V2_TO_V3_MIGRATION_GUIDE.md` - Migration instructions
+### Integrations
+- **STRIPE_INTEGRATION.md** - Stripe setup (merged into INTEGRATIONS.md)
+- **STRIPE_MINIMAL_SCHEMA.sql** - Stripe schema (included in main schema)
+- **STRIPE_CACHING_STRATEGY.md** - Caching strategy (merged into ARCHITECTURE.md)
+- **SEO_INDEXING_INTEGRATION.md** - SEO implementation (superseded by PUBLIC_API.md)
+- **SUPABASE_SECRETS_GUIDE.md** - Secrets management (merged into INTEGRATIONS.md)
 
-### User Flow
-- `USER_FLOW_IMPLEMENTATION.md` - Complete user journey documentation
-- `OAUTH_FLOW_DIAGRAM.md` - OAuth visual diagrams
-- `OAUTH_QUICK_REFERENCE.md` - OAuth quick guide
+### Migration Guides
+- **V2_TO_V3_MIGRATION_GUIDE.md** - Schema v2→v3 migration (historical)
+- **PLATFORM_REQUIREMENTS_GAP_ANALYSIS.md** - Gap analysis (completed, moved from docs/)
 
-### Configuration
-- `SUPABASE_SECRETS_GUIDE.md` - Secrets management
-- `instructions.json` - Project configuration metadata
-
-## 🎯 Purpose
-
-These documents represent the iterative design process and are kept for:
-- Historical reference
-- Understanding design decisions
-- Migration context
-- Learning from the evolution
-
-## 📚 Current Documentation
-
-For active development, refer to the consolidated documentation:
-- `/README.md` - Project overview
-- `/docs/ARCHITECTURE.md` - System design
-- `/docs/DATABASE.md` - Schema reference
-- `/docs/INTEGRATIONS.md` - Setup guides
-- `/database/schema.sql` - Production schema
+### Implementation Notes
+- **instructions.json** - Development instructions
+- **ARCHITECTURE_DECISIONS.md** - Early design decisions (superseded by ARCHITECTURE.md)
 
 ---
 
-**Note**: These are archived documents. All current information has been consolidated into the main documentation.
+## 📖 Current Documentation
+
+**For up-to-date documentation, see:**
+
+### Main Documentation (docs/ folder)
+- **[ARCHITECTURE.md](../docs/ARCHITECTURE.md)** - Current system architecture
+- **[ASYNC_ARCHITECTURE.md](../docs/ASYNC_ARCHITECTURE.md)** - Job queue system (NEW)
+- **[DATABASE.md](../docs/DATABASE.md)** - Current database schema
+- **[DATABASE_OPTIMIZATION.md](../docs/DATABASE_OPTIMIZATION.md)** - Performance optimization (NEW)
+- **[INTEGRATIONS.md](../docs/INTEGRATIONS.md)** - OAuth, Stripe, AI, SEO
+- **[PUBLIC_API.md](../docs/PUBLIC_API.md)** - Public discovery APIs (NEW)
+- **[BACKEND_IMPLEMENTATION.md](../docs/BACKEND_IMPLEMENTATION.md)** - Complete API guide
+- **[POSTMAN_GUIDE.md](../docs/POSTMAN_GUIDE.md)** - API testing
+- **[MIGRATION_CHECKLIST.md](../docs/MIGRATION_CHECKLIST.md)** - Deployment checklist (NEW)
+
+### Root Documentation
+- **[README.md](../README.md)** - Project overview
+- **[QUICK_START.md](../QUICK_START.md)** - 30-minute deployment guide
+- **[IMPLEMENTATION_COMPLETE.md](../IMPLEMENTATION_COMPLETE.md)** - Implementation summary
+- **[PUBLIC_DISCOVERY_SUMMARY.md](../PUBLIC_DISCOVERY_SUMMARY.md)** - Public API details
+
+---
+
+## 🗑️ Why Archived?
+
+These documents served their purpose during initial design and development but are now replaced by:
+
+1. **Consolidated Documentation** - Related topics merged into comprehensive guides
+2. **Current Schema** - Live schema in `database/schema.sql` and migrations
+3. **Implementation Reality** - Actual code in `supabase/functions/`
+4. **Updated Architecture** - Async processing, public APIs, optimizations added
+
+**Recommendation:** Refer to current documentation in `/docs` folder for accurate information.
+
+---
+
+**Last Updated:** November 7, 2025  
+**Archive Created:** Development Phase 1-2 (Oct-Nov 2025)

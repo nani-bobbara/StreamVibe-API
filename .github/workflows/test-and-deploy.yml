@@ -1,0 +1,151 @@
+name: API Testing with Postman
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  test:
+    name: Run Postman Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install Newman
+        run: |
+          npm install -g newman
+          npm install -g newman-reporter-htmlextra
+      
+      - name: Create environment file
+        run: |
+          cat > env.json << EOF
+          {
+            "id": "ci-environment",
+            "name": "CI Environment",
+            "values": [
+              {
+                "key": "base_url",
+                "value": "${{ secrets.SUPABASE_URL }}",
+                "enabled": true
+              },
+              {
+                "key": "anon_key",
+                "value": "${{ secrets.SUPABASE_ANON_KEY }}",
+                "enabled": true
+              },
+              {
+                "key": "service_role_key",
+                "value": "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}",
+                "enabled": true
+              }
+            ]
+          }
+          EOF
+      
+      - name: Run Postman Collection
+        run: |
+          newman run postman/StreamVibe_API_Collection.postman_collection.json \
+            --environment env.json \
+            --reporters cli,htmlextra \
+            --reporter-htmlextra-export test-results/report.html \
+            --reporter-htmlextra-title "StreamVibe API Test Report" \
+            --reporter-htmlextra-darkTheme \
+            --bail \
+            --timeout-request 30000
+        continue-on-error: true
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: postman-test-results
+          path: test-results/
+          retention-days: 30
+      
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            
+            // Read the HTML report and extract summary
+            const reportPath = 'test-results/report.html';
+            if (fs.existsSync(reportPath)) {
+              const report = fs.readFileSync(reportPath, 'utf8');
+              
+              // Extract test summary (simplified)
+              const passed = (report.match(/passed/g) || []).length;
+              const failed = (report.match(/failed/g) || []).length;
+              
+              const body = `## 🧪 Postman API Test Results
+              
+              **Status:** ${failed > 0 ? '❌ Failed' : '✅ Passed'}
+              
+              - ✅ Passed: ${passed}
+              - ❌ Failed: ${failed}
+              
+              📊 [View Full Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+              
+              _Tests run on commit ${{ github.sha }}_`;
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: body
+              });
+            }
+
+  deploy:
+    name: Deploy to Supabase
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      
+      - name: Link Supabase project
+        run: |
+          supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      
+      - name: Deploy database migrations
+        run: |
+          supabase db push
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      
+      - name: Deploy Edge Functions
+        run: |
+          ./deploy.sh --skip-migrations
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      
+      - name: Create deployment summary
+        run: |
+          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Database migrations deployed" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Edge Functions deployed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployed to:** ${{ secrets.SUPABASE_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
