@@ -258,7 +258,6 @@ COMMENT ON TABLE public.notification IS 'User notifications';
 CREATE INDEX idx_notification_user_unread ON public.notification(user_id, created_at DESC) WHERE is_read = false;
 CREATE INDEX idx_notification_expires ON public.notification(expires_at) WHERE expires_at IS NOT NULL;
 CREATE INDEX idx_notification_user_all ON public.notification(user_id, created_at DESC);
-CREATE INDEX idx_notification_expires ON public.notification(expires_at) WHERE expires_at IS NOT NULL;
 
 -- =================================================================================
 -- SECTION 6: AUDIT & TRACKING
