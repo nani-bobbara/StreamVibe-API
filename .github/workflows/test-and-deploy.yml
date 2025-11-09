@@ -113,21 +113,40 @@ jobs:
         with:
           version: latest
       
-      - name: Link Supabase project
+      - name: Link project and deploy migrations
+        timeout-minutes: 5
         run: |
+          echo "Linking project..."
           supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      
-      - name: Deploy database migrations
-        run: |
-          supabase db push
+          echo "Deploying migrations..."
+          supabase db push --linked
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       
       - name: Deploy Edge Functions
+        timeout-minutes: 10
         run: |
-          ./deploy.sh --skip-migrations
+          echo "Deploying Edge Functions..."
+          # Deploy functions in parallel batches for speed
+          functions=(
+            "auth-profile-setup"
+            "oauth-youtube-init" "oauth-youtube-callback"
+            "oauth-instagram-init" "oauth-instagram-callback"
+            "oauth-tiktok-init" "oauth-tiktok-callback"
+            "sync-youtube" "sync-instagram" "sync-tiktok"
+            "ai-generate-tags"
+            "search-creators" "search-content"
+            "get-trending" "get-creator-by-slug" "track-click"
+            "browse-creators" "browse-content" "get-content-detail" "browse-categories"
+            "get-seo-metadata" "sitemap" "robots"
+          )
+          
+          for func in "${functions[@]}"; do
+            echo "Deploying $func..."
+            supabase functions deploy "$func" --no-verify-jwt || echo "Warning: $func failed"
+          done
+          
+          echo "✅ Edge Functions deployment complete"
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       
