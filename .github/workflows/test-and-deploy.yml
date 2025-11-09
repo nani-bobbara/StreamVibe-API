@@ -113,18 +113,13 @@ jobs:
         with:
           version: latest
       
-      - name: Setup Supabase config
-        run: |
-          mkdir -p .supabase
-          cat > .supabase/config.toml << EOF
-          project_id = "${{ secrets.SUPABASE_PROJECT_REF }}"
-          EOF
-      
       - name: Deploy database migrations
         timeout-minutes: 5
         run: |
           echo "Deploying migrations..."
-          supabase db push
+          # The supabase/config.toml already has project_id set
+          # Just need SUPABASE_ACCESS_TOKEN for auth
+          supabase db push --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       
