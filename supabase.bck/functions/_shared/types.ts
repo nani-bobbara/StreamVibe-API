@@ -5,13 +5,12 @@ export interface Database {
       users: {
         Row: {
           id: string
-          // SECURITY: email, full_name, location removed from public.users
-          // PII stored in auth.users.raw_user_meta_data (encrypted)
-          // Access via: supabase.auth.getUser() or auth.email() in policies
+          email: string
           display_name: string | null
           bio: string | null
           avatar_url: string | null
           website_url: string | null
+          location: string | null
           is_verified: boolean
           profile_slug: string | null
           primary_category: string | null
@@ -21,10 +20,7 @@ export interface Database {
           is_public: boolean
           seo_title: string | null
           seo_description: string | null
-          timezone: string
-          language: string
-          is_onboarded: boolean
-          onboarded_at: string | null
+          role: 'user' | 'admin'
           created_at: string
           updated_at: string
         }
@@ -94,8 +90,6 @@ export interface ProfileSetupRequest {
   avatar_url?: string
   primary_category?: string
   website_url?: string
-  // PII fields - stored in auth.users.raw_user_meta_data (encrypted)
-  full_name?: string
   location?: string
 }
 

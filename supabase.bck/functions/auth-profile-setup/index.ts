@@ -53,24 +53,7 @@ serve(async (req) => {
 
     const profileSlug = slugData as string
 
-    // SECURITY: Store PII in auth.users metadata (encrypted), not public.users
-    // Update auth metadata with PII (full_name, location, phone)
-    if (body.full_name || body.location) {
-      const { error: metadataError } = await supabase.auth.updateUser({
-        data: {
-          full_name: body.full_name || null,
-          location: body.location || null,
-          // Add other PII fields here as needed
-        }
-      })
-
-      if (metadataError) {
-        console.error('Error updating auth metadata:', metadataError)
-        throw new Error('Failed to update user metadata')
-      }
-    }
-
-    // Update user profile (non-PII only)
+    // Update user profile
     const { data: userData, error: updateError } = await supabase
       .from('users')
       .update({
@@ -78,7 +61,7 @@ serve(async (req) => {
         bio: body.bio || null,
         avatar_url: body.avatar_url || null,
         website_url: body.website_url || null,
-        // location removed - stored in auth.users.raw_user_meta_data
+        location: body.location || null,
         primary_category: body.primary_category || null,
         profile_slug: profileSlug,
         is_public: true,
