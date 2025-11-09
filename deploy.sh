@@ -19,14 +19,25 @@ fi
 echo "✅ Supabase CLI found"
 echo ""
 
-# Check if project is linked
-if [ ! -f ".supabase/config.toml" ]; then
+# Check if project is linked (either via .supabase/config.toml or SUPABASE_ACCESS_TOKEN in CI)
+if [ ! -f ".supabase/config.toml" ] && [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
     echo "❌ Project not linked to Supabase"
     echo "Run: supabase link --project-ref YOUR_PROJECT_REF"
+    echo "Or set SUPABASE_ACCESS_TOKEN environment variable in CI/CD"
     exit 1
 fi
 
-echo "✅ Project linked"
+# Check project_id in config.toml
+if [ -f "supabase/config.toml" ]; then
+    PROJECT_ID=$(grep '^project_id' supabase/config.toml | sed 's/.*"\(.*\)".*/\1/')
+    if [ -n "$PROJECT_ID" ]; then
+        echo "✅ Project linked: $PROJECT_ID"
+    else
+        echo "✅ Project linked via SUPABASE_ACCESS_TOKEN"
+    fi
+else
+    echo "✅ Project linked via SUPABASE_ACCESS_TOKEN (CI/CD mode)"
+fi
 echo ""
 
 # Parse command line arguments
