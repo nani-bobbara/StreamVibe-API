@@ -1,0 +1,257 @@
+{
+  "info": {
+    "name": "StreamVibe Phase 1 - User Onboarding",
+    "description": "Phase 1 only: User signup, profile setup, and authentication tests",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "{{SUPABASE_URL}}",
+      "type": "string"
+    },
+    {
+      "key": "anon_key",
+      "value": "{{SUPABASE_ANON_KEY}}",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Sign Up",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status is 200\", () => {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const res = pm.response.json();",
+              "",
+              "pm.test(\"Has access_token\", () => {",
+              "    pm.expect(res.access_token).to.be.a('string');",
+              "    pm.environment.set('access_token', res.access_token);",
+              "});",
+              "",
+              "pm.test(\"Has user id\", () => {",
+              "    pm.expect(res.user).to.have.property('id');",
+              "    pm.environment.set('user_id', res.user.id);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "apikey",
+            "value": "{{anon_key}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"test-{{$timestamp}}@streamvibe.test\",\n  \"password\": \"SecurePass123!\"\n}"
+        },
+        "url": "{{base_url}}/auth/v1/signup"
+      }
+    },
+    {
+      "name": "2. Get User Profile (RLS Check)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status is 200\", () => {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const res = pm.response.json();",
+              "",
+              "pm.test(\"Returns array with 1 user\", () => {",
+              "    pm.expect(res).to.be.an('array');",
+              "    pm.expect(res).to.have.lengthOf(1);",
+              "});",
+              "",
+              "pm.test(\"User has required fields\", () => {",
+              "    const user = res[0];",
+              "    pm.expect(user).to.have.property('id');",
+              "    pm.expect(user).to.have.property('is_onboarded');",
+              "    pm.expect(user.is_onboarded).to.equal(false);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{access_token}}"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [
+          {
+            "key": "apikey",
+            "value": "{{anon_key}}"
+          }
+        ],
+        "url": "{{base_url}}/rest/v1/users?select=*&id=eq.{{user_id}}"
+      }
+    },
+    {
+      "name": "3. Call Profile Setup Function",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status is 200\", () => {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const res = pm.response.json();",
+              "",
+              "pm.test(\"Profile setup successful\", () => {",
+              "    pm.expect(res).to.have.property('success', true);",
+              "    pm.expect(res).to.have.property('profile_slug');",
+              "    pm.environment.set('profile_slug', res.profile_slug);",
+              "});",
+              "",
+              "pm.test(\"Generated unique slug\", () => {",
+              "    pm.expect(res.profile_slug).to.be.a('string');",
+              "    pm.expect(res.profile_slug).to.match(/^test-gaming-creator/);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{access_token}}"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "apikey",
+            "value": "{{anon_key}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"display_name\": \"Test Gaming Creator\",\n  \"bio\": \"Testing Phase 1 deployment\",\n  \"category\": \"gaming\"\n}"
+        },
+        "url": "{{base_url}}/functions/v1/auth-profile-setup"
+      }
+    },
+    {
+      "name": "4. Verify Profile Updated",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status is 200\", () => {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const res = pm.response.json();",
+              "",
+              "pm.test(\"Profile is onboarded\", () => {",
+              "    const user = res[0];",
+              "    pm.expect(user.is_onboarded).to.equal(true);",
+              "    pm.expect(user.display_name).to.equal('Test Gaming Creator');",
+              "    pm.expect(user.profile_slug).to.match(/^test-gaming-creator/);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{access_token}}"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [
+          {
+            "key": "apikey",
+            "value": "{{anon_key}}"
+          }
+        ],
+        "url": "{{base_url}}/rest/v1/users?select=*&id=eq.{{user_id}}"
+      }
+    },
+    {
+      "name": "5. Check Subscription Tier",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status is 200\", () => {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const res = pm.response.json();",
+              "",
+              "pm.test(\"Has free tier subscription\", () => {",
+              "    pm.expect(res).to.be.an('array');",
+              "    pm.expect(res.length).to.be.greaterThan(0);",
+              "    const sub = res[0];",
+              "    pm.expect(sub.subscription_tier.slug).to.equal('free');",
+              "    pm.expect(sub.status).to.equal('active');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{access_token}}"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [
+          {
+            "key": "apikey",
+            "value": "{{anon_key}}"
+          }
+        ],
+        "url": "{{base_url}}/rest/v1/subscription?select=*,subscription_tier(*),subscription_status(*)&user_id=eq.{{user_id}}"
+      }
+    }
+  ]
+}
