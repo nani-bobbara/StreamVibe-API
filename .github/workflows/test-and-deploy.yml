@@ -117,9 +117,13 @@ jobs:
         timeout-minutes: 5
         run: |
           echo "Deploying migrations..."
-          # The supabase/config.toml already has project_id set
-          # Just need SUPABASE_ACCESS_TOKEN for auth
-          supabase db push --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+          # Create a temporary link config to avoid interactive prompts
+          echo "[project]" > /tmp/supabase-config.toml
+          echo "ref = \"${{ secrets.SUPABASE_PROJECT_REF }}\"" >> /tmp/supabase-config.toml
+          mkdir -p .supabase
+          cp /tmp/supabase-config.toml .supabase/config.toml
+          # Now push with --linked flag
+          supabase db push --linked
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       
