@@ -108,17 +108,14 @@ CREATE POLICY content_item_all_own ON public.content_item
     );
 
 -- Optimize content_revision policies
+-- Note: content_revision uses content_item_id, not content_id
 DROP POLICY IF EXISTS content_revision_select_own ON public.content_revision;
 CREATE POLICY content_revision_select_own ON public.content_revision 
     FOR SELECT 
-    USING (EXISTS (
-        SELECT 1 FROM public.content_item ci
-        JOIN public.social_account sa ON sa.id = ci.social_account_id
-        WHERE ci.id = content_revision.content_id 
-        AND sa.user_id = (SELECT auth.uid())
-    ));
+    USING ((SELECT auth.uid()) = user_id);
 
 -- Optimize content_tag policies
+-- Note: content_tag ownership is through content_item -> social_account
 DROP POLICY IF EXISTS content_tag_insert_own ON public.content_tag;
 CREATE POLICY content_tag_insert_own ON public.content_tag 
     FOR INSERT 
