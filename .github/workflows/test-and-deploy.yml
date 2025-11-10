@@ -104,6 +104,10 @@ jobs:
       github.ref == 'refs/heads/main' && 
       github.event_name == 'push'
     
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -113,15 +117,15 @@ jobs:
         with:
           version: latest
       
+      - name: Link to Supabase project
+        run: |
+          supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+      
       - name: Deploy database migrations
         timeout-minutes: 5
         run: |
-          echo "Deploying migrations via direct database connection..."
-          # Use --db-url flag to bypass linking requirement
-          # This connects directly to the Supabase PostgreSQL database
-          supabase db push --db-url "postgresql://postgres.ajmyhrclzcfufqptpkcs:${{ secrets.SUPABASE_DB_PASSWORD }}@aws-0-us-east-1.pooler.supabase.com:6543/postgres"
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          echo "Deploying migrations..."
+          supabase db push --password $SUPABASE_DB_PASSWORD
       
       - name: Deploy Edge Functions
         timeout-minutes: 10
@@ -147,8 +151,6 @@ jobs:
           done
           
           echo "✅ Edge Functions deployment complete"
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       
       - name: Create deployment summary
         run: |
