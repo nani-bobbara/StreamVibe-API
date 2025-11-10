@@ -96,19 +96,26 @@ CREATE POLICY social_account_all_own ON public.social_account
 -- =============================================================================
 
 -- Optimize content_item policies
+-- Note: content_item ownership is through social_account.user_id, not direct
 DROP POLICY IF EXISTS content_item_all_own ON public.content_item;
 CREATE POLICY content_item_all_own ON public.content_item 
     FOR ALL 
-    USING ((SELECT auth.uid()) = user_id);
+    USING (
+        (SELECT auth.uid()) IN (
+            SELECT user_id FROM public.social_account
+            WHERE id = content_item.social_account_id
+        )
+    );
 
 -- Optimize content_revision policies
 DROP POLICY IF EXISTS content_revision_select_own ON public.content_revision;
 CREATE POLICY content_revision_select_own ON public.content_revision 
     FOR SELECT 
     USING (EXISTS (
-        SELECT 1 FROM public.content_item 
-        WHERE id = content_revision.content_id 
-        AND user_id = (SELECT auth.uid())
+        SELECT 1 FROM public.content_item ci
+        JOIN public.social_account sa ON sa.id = ci.social_account_id
+        WHERE ci.id = content_revision.content_id 
+        AND sa.user_id = (SELECT auth.uid())
     ));
 
 -- Optimize content_tag policies
@@ -116,9 +123,10 @@ DROP POLICY IF EXISTS content_tag_insert_own ON public.content_tag;
 CREATE POLICY content_tag_insert_own ON public.content_tag 
     FOR INSERT 
     WITH CHECK (EXISTS (
-        SELECT 1 FROM public.content_item 
-        WHERE id = content_tag.content_id 
-        AND user_id = (SELECT auth.uid())
+        SELECT 1 FROM public.content_item ci
+        JOIN public.social_account sa ON sa.id = ci.social_account_id
+        WHERE ci.id = content_tag.content_id 
+        AND sa.user_id = (SELECT auth.uid())
     ));
 
 -- =============================================================================
