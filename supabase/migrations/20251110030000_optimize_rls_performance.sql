@@ -221,7 +221,7 @@ CREATE POLICY job_queue_update_own ON public.job_queue
 DROP POLICY IF EXISTS job_queue_service_all ON public.job_queue;
 CREATE POLICY job_queue_service_all ON public.job_queue 
     FOR ALL 
-    USING ((SELECT auth.role()) = 'service_role');
+    USING ((SELECT auth.jwt()->>'role') = 'service_role');
 
 -- Optimize job_log policies
 DROP POLICY IF EXISTS job_log_select_own ON public.job_log;
@@ -236,7 +236,7 @@ CREATE POLICY job_log_select_own ON public.job_log
 DROP POLICY IF EXISTS job_log_insert_service ON public.job_log;
 CREATE POLICY job_log_insert_service ON public.job_log 
     FOR INSERT 
-    WITH CHECK ((SELECT auth.role()) = 'service_role');
+    WITH CHECK ((SELECT auth.jwt()->>'role') = 'service_role');
 
 -- Optimize stripe_webhook_events policies
 DROP POLICY IF EXISTS stripe_webhook_admin_view ON public.stripe_webhook_events;
@@ -250,7 +250,7 @@ CREATE POLICY stripe_webhook_admin_view ON public.stripe_webhook_events
 
 -- This migration optimizes 33 RLS policies across all 7 phases by:
 -- 1. Wrapping auth.uid() in (SELECT auth.uid()) - evaluated once per query
--- 2. Wrapping auth.role() in (SELECT auth.role()) - evaluated once per query
+-- 2. Wrapping auth.jwt()->>'role' in (SELECT auth.jwt()->>'role') - evaluated once per query
 -- 3. Maintaining exact same authorization logic, just optimized execution
 --
 -- Expected Impact:
