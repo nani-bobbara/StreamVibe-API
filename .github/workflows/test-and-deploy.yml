@@ -125,7 +125,7 @@ jobs:
         timeout-minutes: 5
         run: |
           echo "Deploying migrations..."
-          supabase db push --password $SUPABASE_DB_PASSWORD
+          supabase db push --password $SUPABASE_DB_PASSWORD --include-all
       
       - name: Deploy Edge Functions
         timeout-minutes: 10
