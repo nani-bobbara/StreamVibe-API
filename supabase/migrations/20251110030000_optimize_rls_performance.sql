@@ -169,7 +169,12 @@ CREATE POLICY seo_connection_all_own ON public.seo_connection
 DROP POLICY IF EXISTS seo_submission_all_own ON public.seo_submission;
 CREATE POLICY seo_submission_all_own ON public.seo_submission 
     FOR ALL 
-    USING ((SELECT auth.uid()) = user_id);
+    USING (
+        (SELECT auth.uid()) IN (
+            SELECT user_id FROM public.seo_connection
+            WHERE id = seo_submission.connection_id
+        )
+    );
 
 -- Optimize seo_usage policies
 DROP POLICY IF EXISTS seo_usage_select_own ON public.seo_usage;
