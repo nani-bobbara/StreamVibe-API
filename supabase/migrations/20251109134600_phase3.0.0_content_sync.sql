@@ -73,12 +73,8 @@ CREATE TABLE public.content_item (
     -- AI enhancements (will be populated by AI module)
     ai_description TEXT,
     
-    -- Full-text search
-    search_vector tsvector GENERATED ALWAYS AS (
-        setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
-        setweight(to_tsvector('english', coalesce(description, '')), 'B') ||
-        setweight(to_tsvector('english', array_to_string(coalesce(tags, ARRAY[]::TEXT[]), ' ')), 'C')
-    ) STORED,
+    -- Full-text search (populated by trigger)
+    search_vector tsvector,
     
     -- Timestamps
     published_at TIMESTAMPTZ NOT NULL,
@@ -124,6 +120,25 @@ CREATE TABLE public.content_item (
 );
 
 COMMENT ON TABLE public.content_item IS 'Synced content from social media platforms';
+
+-- Function to update search_vector
+CREATE OR REPLACE FUNCTION public.content_item_search_vector_update()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.search_vector :=
+        setweight(to_tsvector('english', coalesce(NEW.title, '')), 'A') ||
+        setweight(to_tsvector('english', coalesce(NEW.description, '')), 'B') ||
+        setweight(to_tsvector('english', coalesce(array_to_string(NEW.tags, ' '), '')), 'C');
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+-- Trigger to populate search_vector
+CREATE TRIGGER content_item_search_vector_trigger
+    BEFORE INSERT OR UPDATE OF title, description, tags
+    ON public.content_item
+    FOR EACH ROW
+    EXECUTE FUNCTION public.content_item_search_vector_update();
 
 -- Composite indexes for common queries
 CREATE INDEX idx_content_item_account ON public.content_item(social_account_id, published_at DESC) WHERE deleted_at IS NULL;
