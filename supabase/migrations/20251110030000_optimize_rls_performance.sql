@@ -108,7 +108,6 @@ CREATE POLICY content_item_all_own ON public.content_item
     );
 
 -- Optimize content_revision policies
--- Note: content_revision uses content_item_id, not content_id
 DROP POLICY IF EXISTS content_revision_select_own ON public.content_revision;
 CREATE POLICY content_revision_select_own ON public.content_revision 
     FOR SELECT 
@@ -137,10 +136,18 @@ CREATE POLICY user_ai_setting_all_own ON public.user_ai_setting
     USING ((SELECT auth.uid()) = user_id);
 
 -- Optimize ai_suggestion policies
+-- Note: ai_suggestion ownership is through content_item -> social_account
 DROP POLICY IF EXISTS ai_suggestion_all_own ON public.ai_suggestion;
 CREATE POLICY ai_suggestion_all_own ON public.ai_suggestion 
     FOR ALL 
-    USING ((SELECT auth.uid()) = user_id);
+    USING (
+        (SELECT auth.uid()) IN (
+            SELECT sa.user_id
+            FROM public.content_item ci
+            JOIN public.social_account sa ON ci.social_account_id = sa.id
+            WHERE ci.id = ai_suggestion.content_item_id
+        )
+    );
 
 -- Optimize ai_usage policies
 DROP POLICY IF EXISTS ai_usage_select_own ON public.ai_usage;
