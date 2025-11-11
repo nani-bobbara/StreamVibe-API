@@ -33,10 +33,10 @@ ALTER FUNCTION public.update_updated_at_column()
 ALTER FUNCTION public.check_quota(uuid, text) 
     SET search_path = public, pg_temp;
 
-ALTER FUNCTION public.increment_quota(uuid, text) 
+ALTER FUNCTION public.increment_quota(uuid, text, integer, text, uuid) 
     SET search_path = public, pg_temp;
 
-ALTER FUNCTION public.decrement_quota(uuid, text) 
+ALTER FUNCTION public.decrement_quota(uuid, text, integer, text) 
     SET search_path = public, pg_temp;
 
 -- =================================================================================
@@ -56,11 +56,11 @@ ALTER FUNCTION public.prevent_account_deletion_with_content()
 -- =================================================================================
 
 -- Social graph maintenance
-ALTER FUNCTION public.update_total_followers() 
+ALTER FUNCTION public.update_total_followers(uuid) 
     SET search_path = public, pg_temp;
 
 -- SEO-friendly slug generation
-ALTER FUNCTION public.generate_profile_slug(text) 
+ALTER FUNCTION public.generate_profile_slug(text, uuid) 
     SET search_path = public, pg_temp;
 
 -- Content engagement tracking
@@ -68,7 +68,7 @@ ALTER FUNCTION public.increment_content_clicks(uuid)
     SET search_path = public, pg_temp;
 
 -- Trending algorithm
-ALTER FUNCTION public.calculate_trend_score(numeric, integer, integer, integer, timestamp with time zone) 
+ALTER FUNCTION public.calculate_trend_score(integer, integer, timestamp with time zone) 
     SET search_path = public, pg_temp;
 
 -- =================================================================================
@@ -76,58 +76,58 @@ ALTER FUNCTION public.calculate_trend_score(numeric, integer, integer, integer, 
 -- =================================================================================
 
 -- Job lifecycle management
-ALTER FUNCTION public.start_job(uuid) 
+ALTER FUNCTION public.start_job(uuid, text) 
     SET search_path = public, pg_temp;
 
 ALTER FUNCTION public.retry_failed_jobs() 
     SET search_path = public, pg_temp;
 
-ALTER FUNCTION public.cleanup_old_jobs(interval) 
+ALTER FUNCTION public.cleanup_old_jobs() 
     SET search_path = public, pg_temp;
 
-ALTER FUNCTION public.expire_stale_jobs(interval) 
+ALTER FUNCTION public.expire_stale_jobs() 
     SET search_path = public, pg_temp;
 
-ALTER FUNCTION public.detect_stuck_jobs(interval) 
+ALTER FUNCTION public.detect_stuck_jobs() 
     SET search_path = public, pg_temp;
 
 ALTER FUNCTION public.notify_job_status_change() 
     SET search_path = public, pg_temp;
 
 -- Job CRUD operations
-ALTER FUNCTION public.create_job(text, text, jsonb, integer, timestamp with time zone) 
+ALTER FUNCTION public.create_job(uuid, text, jsonb, integer, timestamp with time zone) 
     SET search_path = public, pg_temp;
 
-ALTER FUNCTION public.update_job_progress(uuid, numeric, jsonb) 
+ALTER FUNCTION public.update_job_progress(uuid, integer, text) 
     SET search_path = public, pg_temp;
 
 ALTER FUNCTION public.complete_job(uuid, jsonb) 
     SET search_path = public, pg_temp;
 
-ALTER FUNCTION public.fail_job(uuid, text, jsonb) 
+ALTER FUNCTION public.fail_job(uuid, text, text, jsonb) 
     SET search_path = public, pg_temp;
 
-ALTER FUNCTION public.cancel_job(uuid, text) 
+ALTER FUNCTION public.cancel_job(uuid, uuid) 
     SET search_path = public, pg_temp;
 
 -- Job logging and monitoring
 ALTER FUNCTION public.add_job_log(uuid, text, text, jsonb) 
     SET search_path = public, pg_temp;
 
-ALTER FUNCTION public.get_user_jobs(uuid, text, integer, integer) 
+ALTER FUNCTION public.get_user_jobs(uuid, text, text, integer, integer) 
     SET search_path = public, pg_temp;
 
-ALTER FUNCTION public.get_job_logs(uuid, text, integer, integer) 
+ALTER FUNCTION public.get_job_logs(uuid, uuid, text, integer, integer) 
     SET search_path = public, pg_temp;
 
 -- Job caching and queue stats
-ALTER FUNCTION public.find_or_create_job(uuid, text, text, jsonb, interval) 
+ALTER FUNCTION public.find_or_create_job(uuid, text, jsonb, integer, interval) 
     SET search_path = public, pg_temp;
 
-ALTER FUNCTION public.get_cached_job_result(uuid, text, text, jsonb, interval) 
+ALTER FUNCTION public.get_cached_job_result(uuid, text, jsonb, interval) 
     SET search_path = public, pg_temp;
 
-ALTER FUNCTION public.get_job_queue_stats() 
+ALTER FUNCTION public.get_job_queue_stats(uuid) 
     SET search_path = public, pg_temp;
 
 -- =================================================================================
@@ -138,26 +138,26 @@ ALTER FUNCTION public.get_job_queue_stats()
 ALTER FUNCTION public.log_stripe_webhook_event(text, text, jsonb) 
     SET search_path = public, pg_temp;
 
-ALTER FUNCTION public.mark_webhook_processed(uuid, text, jsonb) 
+ALTER FUNCTION public.mark_webhook_processed(text, text) 
     SET search_path = public, pg_temp;
 
 ALTER FUNCTION public.retry_failed_webhooks(integer) 
     SET search_path = public, pg_temp;
 
-ALTER FUNCTION public.cleanup_old_webhook_events(interval) 
+ALTER FUNCTION public.cleanup_old_webhook_events(integer) 
     SET search_path = public, pg_temp;
 
 -- Stripe data caching
-ALTER FUNCTION public.cache_stripe_data(text, text, text, jsonb, interval) 
+ALTER FUNCTION public.cache_stripe_data(text, jsonb, integer) 
     SET search_path = public, pg_temp;
 
-ALTER FUNCTION public.get_cached_stripe_data(text, text, text) 
+ALTER FUNCTION public.get_cached_stripe_data(text) 
     SET search_path = public, pg_temp;
 
-ALTER FUNCTION public.invalidate_stripe_cache(text, text, text) 
+ALTER FUNCTION public.invalidate_stripe_cache(text) 
     SET search_path = public, pg_temp;
 
-ALTER FUNCTION public.invalidate_stripe_cache_from_webhook() 
+ALTER FUNCTION public.invalidate_stripe_cache_from_webhook(text, text) 
     SET search_path = public, pg_temp;
 
 -- =================================================================================
