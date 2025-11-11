@@ -49,7 +49,7 @@ jobs:
       
       - name: Run Phase 1 Tests
         run: |
-          newman run postman/Phase1_Tests.postman_collection.json \
+          newman run postman/StreamVibe_API_Collection.postman_collection.json \
             --environment env.json \
             --reporters cli,json \
             --reporter-json-export test-results/phase1-results.json \
