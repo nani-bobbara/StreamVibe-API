@@ -2,10 +2,10 @@ name: API Testing and Deployment
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
-  workflow_dispatch: # Allow manual trigger
+    branches: [main, develop]
+  workflow_dispatch:  # Allow manual trigger
 
 permissions:
   contents: read
@@ -19,43 +19,43 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Basic security checks
         run: |
           echo "🔒 Running basic security pre-checks..."
-          
+
           # Check for common secrets patterns
           if grep -r "sk_live_" . --exclude-dir=.git 2>/dev/null; then
             echo "❌ Error: Stripe live key detected!"
             exit 1
           fi
-          
+
           if grep -r "ghp_" . --exclude-dir=.git 2>/dev/null; then
             echo "❌ Error: GitHub token detected!"
             exit 1
           fi
-          
+
           echo "✅ Basic security checks passed"
-  
+
   test:
     needs: security-gate
     name: Run Postman Tests
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      
+
       - name: Install Newman
         run: |
           npm install -g newman
           npm install -g newman-reporter-htmlextra
-      
+
       - name: Create environment file
         run: |
           cat > env.json << EOF
@@ -76,7 +76,7 @@ jobs:
             ]
           }
           EOF
-      
+
       - name: Run Phase 1 Tests
         run: |
           newman run postman/StreamVibe_API_Collection.postman_collection.json \
@@ -85,7 +85,7 @@ jobs:
             --reporter-json-export test-results/phase1-results.json \
             --timeout-request 30000
         continue-on-error: false
-      
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
@@ -93,7 +93,7 @@ jobs:
           name: phase1-test-results
           path: test-results/
           retention-days: 7
-      
+
       - name: Parse test results
         if: always()
         id: test_results
@@ -106,7 +106,7 @@ jobs:
             echo "failed=$FAILED" >> $GITHUB_OUTPUT
             echo "total=$TOTAL" >> $GITHUB_OUTPUT
           fi
-      
+
       - name: Comment PR with results
         if: github.event_name == 'pull_request' && always()
         uses: actions/github-script@v7
@@ -130,34 +130,34 @@ jobs:
     needs: [security-gate, test]
     # Only deploy if security and tests pass, and only on main branch
     if: |
-      github.ref == 'refs/heads/main' && 
+      github.ref == 'refs/heads/main' &&
       github.event_name == 'push' &&
       needs.security-gate.result == 'success' &&
       needs.test.result == 'success'
-    
+
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
           version: latest
-      
+
       - name: Link to Supabase project
         run: |
           supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
-      
+
       - name: Deploy database migrations
         timeout-minutes: 5
         run: |
           echo "Deploying migrations..."
           supabase db push --password $SUPABASE_DB_PASSWORD --include-all
-      
+
       - name: Deploy Edge Functions
         timeout-minutes: 10
         run: |
@@ -175,14 +175,14 @@ jobs:
             "browse-creators" "browse-content" "get-content-detail" "browse-categories"
             "get-seo-metadata" "sitemap" "robots"
           )
-          
+
           for func in "${functions[@]}"; do
             echo "Deploying $func..."
             supabase functions deploy "$func" --no-verify-jwt || echo "Warning: $func failed"
           done
-          
+
           echo "✅ Edge Functions deployment complete"
-      
+
       - name: Create deployment summary
         run: |
           echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
