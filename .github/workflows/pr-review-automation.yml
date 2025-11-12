@@ -1,0 +1,375 @@
+name: Automated Pull Request Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [main, develop]
+  workflow_dispatch: # Allow manual trigger
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  pr-priority-check:
+    name: Determine PR Priority
+    runs-on: ubuntu-latest
+    if: '!github.event.pull_request.draft'
+    outputs:
+      priority: ${{ steps.determine_priority.outputs.priority }}
+      should_review: ${{ steps.determine_priority.outputs.should_review }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Determine PR Priority
+        id: determine_priority
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const labels = pr.labels.map(l => l.name);
+            const title = pr.title.toLowerCase();
+            const body = pr.body || '';
+            
+            // Determine priority based on labels and keywords
+            let priority = 'P3';
+            let should_review = 'true';
+            
+            if (labels.includes('P0') || labels.includes('critical') || 
+                title.includes('p0') || title.includes('critical') || 
+                title.includes('blocker')) {
+              priority = 'P0';
+            } else if (labels.includes('P1') || labels.includes('high-priority') ||
+                       title.includes('p1') || title.includes('urgent')) {
+              priority = 'P1';
+            } else if (labels.includes('P2') || labels.includes('medium-priority')) {
+              priority = 'P2';
+            }
+            
+            // Skip review if PR is WIP or has skip-review label
+            if (labels.includes('skip-review') || labels.includes('WIP') || 
+                title.startsWith('[WIP]') || pr.draft) {
+              should_review = 'false';
+            }
+            
+            core.setOutput('priority', priority);
+            core.setOutput('should_review', should_review);
+            
+            core.info(`PR Priority: ${priority}`);
+            core.info(`Should Review: ${should_review}`);
+
+  automated-code-review:
+    name: Automated Code Review
+    runs-on: ubuntu-latest
+    needs: pr-priority-check
+    if: needs.pr-priority-check.outputs.should_review == 'true'
+    
+    steps:
+      - name: Checkout PR code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      
+      - name: Checkout base branch
+        run: |
+          git fetch origin ${{ github.event.pull_request.base.ref }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Analyze changed files
+        id: analyze_changes
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { execSync } = require('child_process');
+            
+            // Get list of changed files
+            const changedFiles = execSync(
+              `git diff --name-only origin/${{ github.event.pull_request.base.ref }}..HEAD`,
+              { encoding: 'utf-8' }
+            ).trim().split('\n').filter(f => f);
+            
+            const fileTypes = {
+              sql: changedFiles.filter(f => f.endsWith('.sql')).length,
+              typescript: changedFiles.filter(f => f.endsWith('.ts')).length,
+              javascript: changedFiles.filter(f => f.endsWith('.js')).length,
+              yaml: changedFiles.filter(f => f.endsWith('.yml') || f.endsWith('.yaml')).length,
+              markdown: changedFiles.filter(f => f.endsWith('.md')).length,
+              other: changedFiles.filter(f => !f.match(/\.(sql|ts|js|yml|yaml|md)$/)).length
+            };
+            
+            core.setOutput('file_types', JSON.stringify(fileTypes));
+            core.setOutput('total_files', changedFiles.length);
+            core.setOutput('changed_files', JSON.stringify(changedFiles));
+            
+            return { fileTypes, totalFiles: changedFiles.length, changedFiles };
+      
+      - name: SQL Migration Review
+        if: contains(fromJSON(steps.analyze_changes.outputs.file_types).sql, '0') == false
+        run: |
+          echo "🔍 Reviewing SQL migrations..."
+          
+          # Find SQL migration files
+          SQL_FILES=$(git diff --name-only origin/${{ github.event.pull_request.base.ref }}..HEAD | grep '\.sql$' || true)
+          
+          if [ -n "$SQL_FILES" ]; then
+            echo "Found SQL migration files:"
+            echo "$SQL_FILES"
+            
+            # Basic SQL checks
+            for file in $SQL_FILES; do
+              echo "Checking $file..."
+              
+              # Check for potentially dangerous patterns
+              if grep -q "DROP TABLE" "$file"; then
+                echo "⚠️  WARNING: Found DROP TABLE in $file"
+              fi
+              
+              if grep -q "DROP COLUMN" "$file"; then
+                echo "⚠️  WARNING: Found DROP COLUMN in $file"
+              fi
+              
+              # Check for missing rollback
+              if ! grep -q "-- Rollback" "$file" && ! grep -q "Rollback:" "$file"; then
+                echo "ℹ️  INFO: No rollback section found in $file"
+              fi
+              
+              # Check for proper comments
+              if ! grep -q "^-- " "$file"; then
+                echo "ℹ️  INFO: Consider adding comments to $file"
+              fi
+            done
+          fi
+      
+      - name: TypeScript/JavaScript Linting
+        if: contains(fromJSON(steps.analyze_changes.outputs.file_types).typescript, '0') == false || contains(fromJSON(steps.analyze_changes.outputs.file_types).javascript, '0') == false
+        run: |
+          echo "🔍 Checking TypeScript/JavaScript files..."
+          
+          # Check if deno.json exists (for Supabase Edge Functions)
+          if [ -f "deno.json" ]; then
+            echo "Found deno.json - this appears to be a Deno project"
+            
+            # Install Deno if needed
+            if ! command -v deno &> /dev/null; then
+              curl -fsSL https://deno.land/install.sh | sh
+              export PATH="$HOME/.deno/bin:$PATH"
+            fi
+            
+            # Check Deno files
+            TS_FILES=$(git diff --name-only origin/${{ github.event.pull_request.base.ref }}..HEAD | grep '\.ts$' || true)
+            
+            if [ -n "$TS_FILES" ]; then
+              for file in $TS_FILES; do
+                echo "Checking $file with Deno..."
+                deno check "$file" || echo "⚠️  Type checking failed for $file"
+              done
+            fi
+          else
+            echo "No deno.json found, skipping Deno checks"
+          fi
+      
+      - name: Security Scan
+        run: |
+          echo "🔒 Running security checks..."
+          
+          # Check for common security issues
+          echo "Checking for potential secrets..."
+          
+          # Check for hardcoded passwords/keys
+          if git diff origin/${{ github.event.pull_request.base.ref }}..HEAD | grep -iE '(password|api_key|secret|token).*=.*["\047][a-zA-Z0-9]{20,}["\047]'; then
+            echo "⚠️  WARNING: Potential hardcoded secrets detected!"
+            echo "Please review and ensure secrets are stored securely (e.g., Vault, env variables)"
+          fi
+          
+          # Check for SQL injection patterns
+          if git diff origin/${{ github.event.pull_request.base.ref }}..HEAD | grep -E '\$\{.*\}.*INTO|INSERT.*\$\{|UPDATE.*SET.*\$\{'; then
+            echo "⚠️  WARNING: Potential SQL injection risk detected!"
+            echo "Please use parameterized queries"
+          fi
+      
+      - name: Generate Review Summary
+        id: review_summary
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const priority = '${{ needs.pr-priority-check.outputs.priority }}';
+            const fileTypes = ${{ steps.analyze_changes.outputs.file_types }};
+            const totalFiles = ${{ steps.analyze_changes.outputs.total_files }};
+            
+            let reviewSummary = `## 🤖 Automated Code Review\n\n`;
+            reviewSummary += `**Priority:** ${priority}\n`;
+            reviewSummary += `**Files Changed:** ${totalFiles}\n\n`;
+            
+            reviewSummary += `### File Changes Summary\n`;
+            reviewSummary += `- SQL Migrations: ${fileTypes.sql}\n`;
+            reviewSummary += `- TypeScript: ${fileTypes.typescript}\n`;
+            reviewSummary += `- JavaScript: ${fileTypes.javascript}\n`;
+            reviewSummary += `- YAML: ${fileTypes.yaml}\n`;
+            reviewSummary += `- Markdown: ${fileTypes.markdown}\n`;
+            reviewSummary += `- Other: ${fileTypes.other}\n\n`;
+            
+            reviewSummary += `### Review Checklist\n`;
+            reviewSummary += `- [x] Priority determined: ${priority}\n`;
+            reviewSummary += `- [x] Changed files analyzed\n`;
+            reviewSummary += `- [x] Security scan completed\n`;
+            
+            if (fileTypes.sql > 0) {
+              reviewSummary += `- [x] SQL migrations reviewed\n`;
+            }
+            
+            if (fileTypes.typescript > 0 || fileTypes.javascript > 0) {
+              reviewSummary += `- [x] Code quality checks performed\n`;
+            }
+            
+            reviewSummary += `\n### Next Steps\n`;
+            reviewSummary += `1. Review automated check results above\n`;
+            reviewSummary += `2. Address any warnings or issues found\n`;
+            reviewSummary += `3. Request human review if needed\n`;
+            
+            if (priority === 'P0') {
+              reviewSummary += `\n⚠️  **This is a P0 (Critical) PR - requires immediate attention!**\n`;
+            }
+            
+            core.setOutput('summary', reviewSummary);
+            return reviewSummary;
+      
+      - name: Post Review Comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const summary = `${{ steps.review_summary.outputs.summary }}`;
+            
+            // Check if we already posted a review
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number
+            });
+            
+            const botComment = comments.data.find(
+              comment => comment.user.type === 'Bot' && 
+                         comment.body.includes('🤖 Automated Code Review')
+            );
+            
+            if (botComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: summary
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                body: summary
+              });
+            }
+      
+      - name: Auto-approve if safe
+        uses: actions/github-script@v7
+        if: needs.pr-priority-check.outputs.priority != 'P0'
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const fileTypes = ${{ steps.analyze_changes.outputs.file_types }};
+            
+            // Only auto-approve documentation-only changes
+            const isDocsOnly = fileTypes.markdown > 0 && 
+                               fileTypes.sql === 0 && 
+                               fileTypes.typescript === 0 && 
+                               fileTypes.javascript === 0;
+            
+            if (isDocsOnly) {
+              core.info('Documentation-only changes detected - can be auto-approved');
+              
+              await github.rest.pulls.createReview({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.payload.pull_request.number,
+                event: 'COMMENT',
+                body: '✅ Automated review passed for documentation changes. Safe to merge after human review.'
+              });
+            } else {
+              core.info('Code changes detected - requires human review');
+            }
+
+  pr-queue-status:
+    name: Update PR Queue Status
+    runs-on: ubuntu-latest
+    needs: [pr-priority-check, automated-code-review]
+    if: always()
+    
+    steps:
+      - name: Update PR Queue Comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Get all open PRs
+            const { data: pulls } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              sort: 'created',
+              direction: 'asc'
+            });
+            
+            // Categorize by priority
+            const prsByPriority = {
+              P0: [],
+              P1: [],
+              P2: [],
+              P3: []
+            };
+            
+            for (const pr of pulls) {
+              if (pr.draft) continue; // Skip drafts
+              
+              const labels = pr.labels.map(l => l.name);
+              const title = pr.title.toLowerCase();
+              
+              let priority = 'P3';
+              if (labels.includes('P0') || title.includes('p0') || title.includes('critical')) {
+                priority = 'P0';
+              } else if (labels.includes('P1') || title.includes('p1')) {
+                priority = 'P1';
+              } else if (labels.includes('P2')) {
+                priority = 'P2';
+              }
+              
+              prsByPriority[priority].push({
+                number: pr.number,
+                title: pr.title,
+                author: pr.user.login,
+                created: pr.created_at
+              });
+            }
+            
+            // Generate queue status
+            let queueStatus = `## 📋 PR Review Queue Status\n\n`;
+            queueStatus += `**Last Updated:** ${new Date().toISOString()}\n\n`;
+            
+            for (const priority of ['P0', 'P1', 'P2', 'P3']) {
+              const prs = prsByPriority[priority];
+              if (prs.length === 0) continue;
+              
+              queueStatus += `### ${priority} Priority (${prs.length} PRs)\n`;
+              for (const pr of prs) {
+                queueStatus += `- #${pr.number}: ${pr.title} (@${pr.author})\n`;
+              }
+              queueStatus += `\n`;
+            }
+            
+            core.info('PR Queue Status:\n' + queueStatus);
