@@ -2,7 +2,12 @@
 
 ## 📋 Overview
 
-This Postman collection provides complete API testing for the StreamVibe platform, organized by phases and user flows with automated test scripts.
+This Postman collection provides **complete API testing** for the StreamVibe platform, organized by phases and user flows with automated test scripts.
+
+**Version:** 2.0.0  
+**Coverage:** 100% (23/23 Edge Functions)  
+**Total Requests:** 30 across 7 phases  
+**Test Scripts:** 30+ automated validations
 
 ## 🚀 Quick Start
 
@@ -110,54 +115,165 @@ OAuth requires browser interaction for user consent:
 
 ---
 
-### Phase 3: Content Sync (Coming Soon)
+### Phase 3: Content Sync (4 requests) ✅
 
 Pull metadata from connected platforms.
 
-#### Planned Requests:
-- **3.1 Sync YouTube Content** - Fetch videos metadata
-- **3.2 Sync Instagram Content** - Fetch posts metadata
-- **3.3 Sync TikTok Content** - Fetch videos metadata
-- **3.4 Get Synced Content** - View imported content
-- **3.5 Sync All Platforms** - Batch sync
+#### Requests:
+1. **3.1 Sync YouTube Content** - Fetch up to 250 videos from connected YouTube channel
+2. **3.2 Sync Instagram Content** - Fetch posts from Instagram (requires OAuth)
+3. **3.3 Sync TikTok Content** - Fetch videos from TikTok (requires OAuth)
+4. **3.4 Get Synced Content** - View all imported content for current user
+
+#### Automated Tests:
+- ✅ Sync success validation
+- ✅ Statistics verification (synced_count, failed_count)
+- ✅ Content persistence checks
+- ✅ Auto-save content_id for next phases
+
+#### Prerequisites:
+- Complete Phase 2 (OAuth connection established)
+- YouTube/Instagram/TikTok account connected
+- Valid OAuth tokens in Supabase Vault
+
+#### Test Scenario:
+```
+1. Run 3.1 Sync YouTube - Syncs videos from connected channel
+2. Run 3.4 Get Synced Content - Verify content was imported
+3. Check response includes title, thumbnail_url, views_count
+```
 
 ---
 
-### Phase 4: AI Enhancement (Coming Soon)
+### Phase 4: AI Enhancement (2 requests) ✅
 
-Generate tags and optimize descriptions.
+Generate AI-powered tags and optimize metadata using OpenAI GPT-4.
 
-#### Planned Requests:
-- **4.1 Generate AI Tags** - OpenAI GPT-4 tag generation
-- **4.2 Enhance Description** - SEO-optimized descriptions
-- **4.3 Auto-Categorize** - Content category detection
-- **4.4 Get Content Tags** - View generated tags
+#### Requests:
+1. **4.1 Generate AI Tags** - Use GPT-4 to generate 10-15 SEO-optimized tags
+2. **4.2 Get Content Tags** - View AI-generated tags with confidence scores
+
+#### Automated Tests:
+- ✅ AI generation success
+- ✅ Tag count validation (10+ tags)
+- ✅ SEO metadata update verification
+- ✅ Tag structure validation (tag, confidence_score, tag_type)
+
+#### Prerequisites:
+- Complete Phase 3 (have content items)
+- OpenAI API key configured in Supabase secrets
+- Content ID from synced content
+
+#### What This Does:
+1. Analyzes content title and description
+2. Generates 10-15 relevant tags using GPT-4
+3. Assigns tag types (keyword, topic, entity, emotion, trend)
+4. Calculates confidence scores (0.0-1.0)
+5. Creates optimized seo_title and seo_description
+6. Stores tags in content_tag table
+
+#### Test Scenario:
+```
+Content: "How to Build a React App - Complete Tutorial"
+Expected Tags: react, tutorial, web development, javascript, frontend
+Expected SEO Title: "Complete React App Tutorial - Build Modern Web Apps"
+```
 
 ---
 
-### Phase 5: Discovery & Search (Coming Soon)
+### Phase 5: Discovery & Search (9 requests) ✅
 
-Search creators and content.
+Public discovery APIs for browsing and searching content - **No authentication required**.
 
-#### Planned Requests:
-- **5.1 Search Creators** - Full-text creator search
-- **5.2 Search Content** - Full-text content search
-- **5.3 Get Trending** - Trending content algorithm
-- **5.4 Get Featured Creators** - Curated creators
-- **5.5 Browse by Category** - Filter by genre
+#### Requests:
+1. **5.1 Browse Creators** - Browse all public creators with filters
+2. **5.2 Browse Content** - Browse all public content with filters
+3. **5.3 Browse Categories** - List all available categories
+4. **5.4 Get Creator by Slug** - Get creator profile by slug (for `/c/{slug}` pages)
+5. **5.5 Get Content Detail** - Get detailed content info (increments view count)
+6. **5.6 Get Trending Content** - Trending algorithm (views + recency + velocity)
+7. **5.7 Search Creators** - Full-text search for creators
+8. **5.8 Search Content** - Full-text search for content
+9. **5.9 Get SEO Metadata** - Open Graph tags for social sharing
+
+#### Automated Tests:
+- ✅ Public access (no auth required)
+- ✅ Response structure validation
+- ✅ Pagination checks
+- ✅ Filter validation
+- ✅ Auto-save creator_slug for creator endpoints
+
+#### Key Features:
+- **No Authentication** - Public endpoints for anonymous browsing
+- **SEO-Optimized** - Cached responses, clean URLs
+- **Advanced Filtering** - Category, platform, verified status, sort options
+- **Full-Text Search** - PostgreSQL full-text search on multiple fields
+
+#### Query Parameters (Browse Creators):
+- `category` (optional): gaming, music, education, etc.
+- `verified_only` (optional): true/false
+- `min_followers` (optional): Minimum follower count
+- `sort_by` (optional): followers | recent | popular
+- `limit` (optional): 1-100, default 50
+- `offset` (optional): Pagination offset
+
+#### Test Scenario:
+```
+1. Browse gaming creators sorted by followers
+2. Get first creator's slug
+3. Get creator profile by slug
+4. Search for "python tutorial"
+5. Get trending content
+```
 
 ---
 
-### Phase 6: Analytics & Tracking (Coming Soon)
+### Phase 6: Analytics & Tracking (2 requests) ✅
 
-Click tracking and performance metrics.
+Click tracking and analytics endpoints for measuring content performance.
 
-#### Planned Requests:
-- **6.1 Track Click** - Log content click
-- **6.2 Track Profile View** - Log profile view
-- **6.3 Get Content Analytics** - Click stats per content
-- **6.4 Get Profile Analytics** - Views, clicks, referrers
-- **6.5 Get Top Content** - Best performing content
+#### Requests:
+1. **6.1 Track Click** - Log content click event (anonymous, no auth)
+2. **6.2 Get Content Analytics** - View analytics for specific content (requires auth)
+
+#### Automated Tests:
+- ✅ Click tracking success
+- ✅ Analytics data validation
+- ✅ Metric counters (views, likes, comments, clicks)
+
+#### What This Does:
+- Tracks content clicks with referrer information
+- Increments click counters
+- Provides aggregated analytics (no PII)
+- GDPR compliant (anonymous metrics)
+
+#### Test Scenario:
+```
+1. Track click on content item
+2. Get content analytics to verify click was recorded
+3. Check clicks_count incremented
+```
+
+---
+
+### Phase 7: SEO & Robots (2 requests) ✅
+
+SEO optimization endpoints for search engines.
+
+#### Requests:
+1. **7.1 Get Robots.txt** - Crawler directives for search engines
+2. **7.2 Get Sitemap** - XML sitemap with all public URLs
+
+#### Key Features:
+- **Search Engine Friendly** - Proper robots.txt and sitemap.xml
+- **Dynamic Generation** - Sitemap includes all public profiles and content
+- **SEO Best Practices** - Proper XML structure, priority, changefreq
+
+#### Test Scenario:
+```
+1. Get robots.txt - Verify allows all crawlers
+2. Get sitemap - Verify includes creator profiles and content URLs
+```
 
 ---
 
