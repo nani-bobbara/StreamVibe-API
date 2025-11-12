@@ -1,0 +1,386 @@
+name: PR Reviewer Bot
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [main, develop]
+  # Manual trigger to review all open PRs
+  workflow_dispatch:
+    inputs:
+      review_all:
+        description: 'Review all open PRs'
+        required: false
+        default: 'false'
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  review-pr:
+    name: Review Pull Request
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Get PR details and determine priority
+        id: pr_info
+        uses: actions/github-script@v7
+        with:
+          script: |
+            let pr;
+            if (context.eventName === 'workflow_dispatch') {
+              // Manual trigger - get all open PRs
+              const { data: prs } = await github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                sort: 'created',
+                per_page: 100
+              });
+              
+              // Filter out drafts and WIP
+              const reviewablePRs = prs.filter(p => 
+                !p.draft && 
+                !p.title.toLowerCase().startsWith('[wip]')
+              );
+              
+              if (reviewablePRs.length === 0) {
+                core.info('No PRs to review');
+                return { shouldReview: false };
+              }
+              
+              // Sort by priority (P0 > P1 > P2 > P3)
+              const prioritized = reviewablePRs.map(p => {
+                const labels = p.labels.map(l => l.name);
+                const title = p.title.toLowerCase();
+                
+                let priority = 4; // P3
+                if (labels.includes('P0') || title.includes('p0') || title.includes('critical') || title.includes('blocker')) {
+                  priority = 1;
+                } else if (labels.includes('P1') || title.includes('p1') || title.includes('urgent')) {
+                  priority = 2;
+                } else if (labels.includes('P2')) {
+                  priority = 3;
+                }
+                
+                return { ...p, priority };
+              }).sort((a, b) => a.priority - b.priority);
+              
+              pr = prioritized[0];
+              core.info(`Reviewing highest priority PR: #${pr.number}`);
+            } else {
+              // Triggered by PR event
+              pr = context.payload.pull_request;
+            }
+            
+            if (pr.draft || pr.title.toLowerCase().startsWith('[wip]')) {
+              core.info('Skipping draft/WIP PR');
+              return { shouldReview: false };
+            }
+            
+            const labels = pr.labels.map(l => l.name);
+            const title = pr.title.toLowerCase();
+            
+            let priority = 'P3';
+            if (labels.includes('P0') || title.includes('p0') || title.includes('critical') || title.includes('blocker')) {
+              priority = 'P0';
+            } else if (labels.includes('P1') || title.includes('p1') || title.includes('urgent')) {
+              priority = 'P1';
+            } else if (labels.includes('P2')) {
+              priority = 'P2';
+            }
+            
+            return {
+              shouldReview: true,
+              number: pr.number,
+              title: pr.title,
+              author: pr.user.login,
+              priority: priority,
+              base: pr.base.ref,
+              head: pr.head.ref,
+              headSha: pr.head.sha
+            };
+      
+      - name: Fetch PR changes
+        if: fromJSON(steps.pr_info.outputs.result).shouldReview
+        id: get_changes
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prInfo = ${{ steps.pr_info.outputs.result }};
+            if (!prInfo.shouldReview) return {};
+            
+            // Get PR files
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prInfo.number
+            });
+            
+            // Get existing reviews
+            const { data: reviews } = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prInfo.number
+            });
+            
+            // Get existing comments
+            const { data: comments } = await github.rest.pulls.listReviewComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prInfo.number
+            });
+            
+            return {
+              files,
+              reviews,
+              comments,
+              fileCount: files.length
+            };
+      
+      - name: Analyze code changes
+        if: fromJSON(steps.pr_info.outputs.result).shouldReview
+        id: analyze
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prInfo = ${{ steps.pr_info.outputs.result }};
+            if (!prInfo.shouldReview) return { issues: [] };
+            
+            const changes = ${{ steps.get_changes.outputs.result }};
+            const files = changes.files || [];
+            
+            const issues = [];
+            const suggestions = [];
+            
+            for (const file of files) {
+              const filename = file.filename;
+              const patch = file.patch || '';
+              
+              // SQL migration checks
+              if (filename.endsWith('.sql')) {
+                // Check for DROP statements without safeguards
+                if (patch.includes('DROP TABLE') && !patch.includes('IF EXISTS')) {
+                  issues.push({
+                    file: filename,
+                    severity: 'high',
+                    message: 'DROP TABLE without IF EXISTS - could fail if table doesn\'t exist'
+                  });
+                }
+                
+                // Check for default values that might cause data issues
+                if (patch.match(/DEFAULT\s+['"]['"]/) || patch.match(/DEFAULT\s+['"]\s*['"]/)) {
+                  issues.push({
+                    file: filename,
+                    severity: 'medium',
+                    message: 'Empty string as default value - consider using NULL instead'
+                  });
+                }
+                
+                // Check for blanket defaults that could corrupt existing data
+                if (patch.match(/ALTER TABLE.*ADD COLUMN.*NOT NULL.*DEFAULT\s+['"](?!$)/i)) {
+                  suggestions.push({
+                    file: filename,
+                    message: 'Adding NOT NULL column with default to existing table - ensure default value is appropriate for all existing rows'
+                  });
+                }
+                
+                // Check for missing rollback comments
+                if (!patch.includes('Rollback') && !patch.includes('ROLLBACK')) {
+                  suggestions.push({
+                    file: filename,
+                    message: 'Consider adding rollback instructions in comments'
+                  });
+                }
+              }
+              
+              // TypeScript/JavaScript checks
+              if (filename.endsWith('.ts') || filename.endsWith('.js')) {
+                // Check for console.log (should use proper logging)
+                if (patch.includes('console.log') && !filename.includes('test')) {
+                  suggestions.push({
+                    file: filename,
+                    message: 'Found console.log - consider using proper logging framework'
+                  });
+                }
+                
+                // Check for hardcoded credentials
+                if (patch.match(/(password|api_key|secret|token)\s*[:=]\s*['"][^'"]{20,}['"]/i)) {
+                  issues.push({
+                    file: filename,
+                    severity: 'critical',
+                    message: 'Potential hardcoded credentials detected - use environment variables or Vault'
+                  });
+                }
+                
+                // Check for SQL injection risks
+                if (patch.match(/\$\{[^}]+\}.*(?:INSERT|UPDATE|DELETE|SELECT)/i)) {
+                  issues.push({
+                    file: filename,
+                    severity: 'high',
+                    message: 'Potential SQL injection risk - use parameterized queries'
+                  });
+                }
+              }
+              
+              // YAML workflow checks
+              if (filename.endsWith('.yml') || filename.endsWith('.yaml')) {
+                // Check for missing workflow permissions
+                if (patch.includes('uses: actions/github-script') && !patch.includes('permissions:')) {
+                  suggestions.push({
+                    file: filename,
+                    message: 'GitHub Actions workflow should explicitly define permissions'
+                  });
+                }
+              }
+            }
+            
+            return { issues, suggestions, filesAnalyzed: files.length };
+      
+      - name: Generate review comments
+        if: fromJSON(steps.pr_info.outputs.result).shouldReview
+        id: review
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prInfo = ${{ steps.pr_info.outputs.result }};
+            if (!prInfo.shouldReview) return { approved: false };
+            
+            const analysis = ${{ steps.analyze.outputs.result }};
+            const issues = analysis.issues || [];
+            const suggestions = analysis.suggestions || [];
+            
+            let reviewBody = `## 🤖 Automated Code Review\n\n`;
+            reviewBody += `**PR:** #${prInfo.number} - ${prInfo.title}\n`;
+            reviewBody += `**Priority:** ${prInfo.priority}\n`;
+            reviewBody += `**Author:** @${prInfo.author}\n`;
+            reviewBody += `**Files Analyzed:** ${analysis.filesAnalyzed}\n\n`;
+            
+            if (issues.length > 0) {
+              reviewBody += `### ❌ Issues Found (${issues.length})\n\n`;
+              
+              const critical = issues.filter(i => i.severity === 'critical');
+              const high = issues.filter(i => i.severity === 'high');
+              const medium = issues.filter(i => i.severity === 'medium');
+              
+              if (critical.length > 0) {
+                reviewBody += `#### 🔴 Critical Issues\n`;
+                critical.forEach(issue => {
+                  reviewBody += `- **${issue.file}**: ${issue.message}\n`;
+                });
+                reviewBody += `\n`;
+              }
+              
+              if (high.length > 0) {
+                reviewBody += `#### ⚠️ High Priority Issues\n`;
+                high.forEach(issue => {
+                  reviewBody += `- **${issue.file}**: ${issue.message}\n`;
+                });
+                reviewBody += `\n`;
+              }
+              
+              if (medium.length > 0) {
+                reviewBody += `#### 📝 Medium Priority Issues\n`;
+                medium.forEach(issue => {
+                  reviewBody += `- **${issue.file}**: ${issue.message}\n`;
+                });
+                reviewBody += `\n`;
+              }
+            }
+            
+            if (suggestions.length > 0) {
+              reviewBody += `### 💡 Suggestions (${suggestions.length})\n\n`;
+              suggestions.forEach(suggestion => {
+                reviewBody += `- **${suggestion.file}**: ${suggestion.message}\n`;
+              });
+              reviewBody += `\n`;
+            }
+            
+            if (issues.length === 0 && suggestions.length === 0) {
+              reviewBody += `### ✅ No Issues Found\n\n`;
+              reviewBody += `All automated checks passed! The code looks good from an automated perspective.\n\n`;
+              reviewBody += `**Note:** This is an automated review. Human review is still recommended for:\n`;
+              reviewBody += `- Business logic validation\n`;
+              reviewBody += `- Code architecture decisions\n`;
+              reviewBody += `- Edge case handling\n`;
+              reviewBody += `- Performance implications\n\n`;
+            }
+            
+            // Determine if we should approve
+            const shouldApprove = issues.length === 0 && prInfo.priority !== 'P0';
+            const criticalIssues = issues.filter(i => i.severity === 'critical').length;
+            
+            if (prInfo.priority === 'P0') {
+              reviewBody += `\n---\n⚠️  **This is a P0 (Critical) PR** - Requires manual review by senior engineer before merge.\n`;
+            }
+            
+            if (criticalIssues > 0) {
+              reviewBody += `\n---\n🚫 **CANNOT APPROVE** - ${criticalIssues} critical issue(s) must be resolved first.\n`;
+            } else if (shouldApprove) {
+              reviewBody += `\n---\n✅ **Automated review passed** - Safe for human review and potential approval.\n`;
+            }
+            
+            return {
+              body: reviewBody,
+              approved: shouldApprove,
+              criticalIssues: criticalIssues,
+              totalIssues: issues.length
+            };
+      
+      - name: Post review
+        if: fromJSON(steps.pr_info.outputs.result).shouldReview
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prInfo = ${{ steps.pr_info.outputs.result }};
+            const review = ${{ steps.review.outputs.result }};
+            
+            // Post review comment
+            await github.rest.pulls.createReview({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prInfo.number,
+              event: review.criticalIssues > 0 ? 'REQUEST_CHANGES' : 'COMMENT',
+              body: review.body
+            });
+            
+            core.info(`Review posted for PR #${prInfo.number}`);
+            core.info(`Critical Issues: ${review.criticalIssues}`);
+            core.info(`Total Issues: ${review.totalIssues}`);
+            core.info(`Approved: ${review.approved}`);
+      
+      - name: Add labels based on review
+        if: fromJSON(steps.pr_info.outputs.result).shouldReview
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prInfo = ${{ steps.pr_info.outputs.result }};
+            const review = ${{ steps.review.outputs.result }};
+            
+            const labelsToAdd = [];
+            
+            if (review.criticalIssues > 0) {
+              labelsToAdd.push('needs-work');
+              labelsToAdd.push('security-review');
+            } else if (review.totalIssues === 0) {
+              labelsToAdd.push('ready-for-review');
+            }
+            
+            if (labelsToAdd.length > 0) {
+              try {
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: prInfo.number,
+                  labels: labelsToAdd
+                });
+              } catch (error) {
+                core.warning(`Failed to add labels: ${error.message}`);
+              }
+            }
