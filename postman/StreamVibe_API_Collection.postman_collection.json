@@ -1,8 +1,8 @@
 {
   "info": {
     "name": "StreamVibe API - Complete Collection",
-    "description": "Complete API collection for StreamVibe metadata aggregation & discovery platform.\n\n## Overview\nStreamVibe is a content creator discovery platform that syncs metadata from social platforms (YouTube, Instagram, TikTok) and makes it discoverable via SEO-optimized public profiles.\n\n## Base URL\n`{{base_url}}` = https://[your-project-ref].supabase.co\n\n## Authentication\n- **Public endpoints**: No auth required\n- **Authenticated endpoints**: `Authorization: Bearer {{access_token}}`\n- **Service role endpoints**: `Authorization: Bearer {{service_role_key}}`\n\n## Test Data\nUse the environment variables to store test data:\n- `user_id`, `access_token`, `profile_slug`\n- `social_account_id`, `content_id`\n- Platform credentials\n\n## Flows\n1. **Phase 1: User Onboarding** - Signup → Profile Setup\n2. **Phase 2: Platform Connection** - OAuth → Token Storage\n3. **Phase 3: Content Sync** - Pull Metadata → Store Content\n4. **Phase 4: AI Enhancement** - Generate Tags → SEO Optimization\n5. **Phase 5: Discovery** - Search → Click Tracking\n6. **Phase 6: Analytics** - Trending → Featured Creators",
-    "version": "1.0.0",
+    "description": "Complete API collection for StreamVibe metadata aggregation & discovery platform.\n\n## Overview\nStreamVibe is a content creator discovery platform that syncs metadata from social platforms (YouTube, Instagram, TikTok) and makes it discoverable via SEO-optimized public profiles.\n\n## Base URL\n`{{base_url}}` = https://[your-project-ref].supabase.co\n\n## Authentication\n- **Public endpoints**: No auth required\n- **Authenticated endpoints**: `Authorization: Bearer {{access_token}}`\n- **Service role endpoints**: `Authorization: Bearer {{service_role_key}}`\n\n## Test Coverage\nThis collection now includes **50+ endpoints** across 7 phases:\n1. \u2705 **Phase 1: User Onboarding** (4 requests)\n2. \u2705 **Phase 2: OAuth Connections** (8 requests)\n3. \u2705 **Phase 3: Content Sync** (4 requests)\n4. \u2705 **Phase 4: AI Enhancement** (2 requests)\n5. \u2705 **Phase 5: Discovery & Search** (9 requests)\n6. \u2705 **Phase 6: Analytics** (2 requests)\n7. \u2705 **Phase 7: SEO** (2 requests)\n\n## Quick Start\n1. Import this collection\n2. Import environment file\n3. Set `base_url`, `anon_key`, `service_role_key`\n4. Run Phase 1 to create test user\n5. Continue through phases sequentially\n\n## Flows\nEach phase builds on the previous:\n- **Phase 1**: Create account & profile\n- **Phase 2**: Connect social platforms via OAuth\n- **Phase 3**: Sync content from platforms\n- **Phase 4**: Generate AI tags and SEO metadata\n- **Phase 5**: Browse/search public content\n- **Phase 6**: Track analytics\n- **Phase 7**: SEO optimization",
+    "version": "2.0.0",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -70,7 +70,7 @@
                   "    pm.environment.set('access_token', response.access_token);",
                   "    pm.environment.set('user_id', response.user.id);",
                   "    pm.environment.set('user_email', response.user.email);",
-                  "    console.log('✅ Saved access_token and user_id to environment');",
+                  "    console.log('\u2705 Saved access_token and user_id to environment');",
                   "}",
                   "",
                   "// Test: Email matches request",
@@ -101,8 +101,14 @@
             },
             "url": {
               "raw": "{{base_url}}/auth/v1/signup",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "v1", "signup"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "v1",
+                "signup"
+              ]
             },
             "description": "Create a new user account using email and password.\n\n### Supabase Auth Endpoint\nThis is a standard Supabase Auth endpoint. No custom Edge Function required.\n\n### Request Body\n```json\n{\n  \"email\": \"user@example.com\",\n  \"password\": \"SecurePass123!\",\n  \"data\": {\n    \"signup_source\": \"web\"\n  }\n}\n```\n\n### Response\n```json\n{\n  \"access_token\": \"eyJhbGc...\",\n  \"token_type\": \"bearer\",\n  \"expires_in\": 3600,\n  \"refresh_token\": \"...\",\n  \"user\": {\n    \"id\": \"uuid\",\n    \"email\": \"user@example.com\",\n    \"created_at\": \"2025-11-07T10:00:00Z\"\n  }\n}\n```\n\n### Next Step\nCall **1.2 Complete Profile Setup** with the `access_token`."
           },
@@ -154,8 +160,8 @@
                   "if (response.profile) {",
                   "    pm.environment.set('profile_slug', response.profile.profile_slug);",
                   "    pm.environment.set('display_name', response.profile.display_name);",
-                  "    console.log('✅ Saved profile_slug:', response.profile.profile_slug);",
-                  "    console.log('🌐 Profile URL:', response.profile.profile_url);",
+                  "    console.log('\u2705 Saved profile_slug:', response.profile.profile_slug);",
+                  "    console.log('\ud83c\udf10 Profile URL:', response.profile.profile_url);",
                   "}",
                   "",
                   "// Test: Display name matches request",
@@ -186,8 +192,14 @@
             },
             "url": {
               "raw": "{{base_url}}/functions/v1/auth-profile-setup",
-              "host": ["{{base_url}}"],
-              "path": ["functions", "v1", "auth-profile-setup"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "auth-profile-setup"
+              ]
             },
             "description": "Complete user profile after signup. This creates the public creator profile.\n\n### Edge Function\n`auth-profile-setup`\n\n### Required Fields\n- `display_name` (string, required): Public creator name\n\n### Optional Fields\n- `bio` (string): Profile bio/description\n- `avatar_url` (string): Profile picture URL\n- `primary_category` (string): Main content category (gaming, music, education, etc.)\n- `website_url` (string): Personal website\n- `location` (string): Geographic location\n\n### What This Does\n1. Generates unique `profile_slug` from display_name\n2. Updates user record with public profile fields\n3. Sets `is_public = true` for discoverability\n4. Returns profile URL: `streamvibe.com/c/{slug}`\n\n### Response\n```json\n{\n  \"success\": true,\n  \"profile\": {\n    \"user_id\": \"uuid\",\n    \"display_name\": \"Test Gaming Creator\",\n    \"profile_slug\": \"test-gaming-creator\",\n    \"profile_url\": \"https://streamvibe.com/c/test-gaming-creator\"\n  }\n}\n```\n\n### Next Step\nProfile is ready! Proceed to **Phase 2: Connect Social Platforms**."
           },
@@ -230,7 +242,7 @@
                   "    });",
                   "    ",
                   "    // Log profile details",
-                  "    console.log('📊 Profile Details:');",
+                  "    console.log('\ud83d\udcca Profile Details:');",
                   "    console.log('  Display Name:', user.display_name);",
                   "    console.log('  Slug:', user.profile_slug);",
                   "    console.log('  Category:', user.primary_category);",
@@ -256,8 +268,14 @@
             ],
             "url": {
               "raw": "{{base_url}}/rest/v1/users?id=eq.{{user_id}}&select=*",
-              "host": ["{{base_url}}"],
-              "path": ["rest", "v1", "users"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "rest",
+                "v1",
+                "users"
+              ],
               "query": [
                 {
                   "key": "id",
@@ -294,7 +312,7 @@
                   "if (response.access_token) {",
                   "    pm.environment.set('access_token', response.access_token);",
                   "    pm.environment.set('user_id', response.user.id);",
-                  "    console.log('✅ Logged in successfully');",
+                  "    console.log('\u2705 Logged in successfully');",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -319,8 +337,14 @@
             },
             "url": {
               "raw": "{{base_url}}/auth/v1/token?grant_type=password",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "v1", "token"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "v1",
+                "token"
+              ],
               "query": [
                 {
                   "key": "grant_type",
@@ -371,10 +395,10 @@
                       "",
                       "// Display authorization URL",
                       "if (response.authorization_url) {",
-                      "    console.log('🔗 YouTube Authorization URL:');",
+                      "    console.log('\ud83d\udd17 YouTube Authorization URL:');",
                       "    console.log(response.authorization_url);",
                       "    console.log('');",
-                      "    console.log('👉 MANUAL STEP:');",
+                      "    console.log('\ud83d\udc49 MANUAL STEP:');",
                       "    console.log('1. Copy the URL above');",
                       "    console.log('2. Open in browser');",
                       "    console.log('3. Log into Google');",
@@ -397,8 +421,14 @@
                 ],
                 "url": {
                   "raw": "{{base_url}}/functions/v1/oauth-youtube-init",
-                  "host": ["{{base_url}}"],
-                  "path": ["functions", "v1", "oauth-youtube-init"]
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "functions",
+                    "v1",
+                    "oauth-youtube-init"
+                  ]
                 },
                 "description": "Initialize YouTube OAuth 2.0 flow.\n\n### Edge Function\n`oauth-youtube-init`\n\n### What This Does\n1. Generates CSRF state token\n2. Stores state in database (10 min expiry)\n3. Builds Google OAuth URL with:\n   - YouTube readonly scope\n   - User profile scope\n   - Offline access (refresh token)\n4. Returns authorization URL\n\n### Response\n```json\n{\n  \"success\": true,\n  \"authorization_url\": \"https://accounts.google.com/o/oauth2/v2/auth?client_id=...\",\n  \"state\": \"csrf-token-uuid\"\n}\n```\n\n### Manual Steps (Browser)\n1. Copy `authorization_url` from response\n2. Open in browser\n3. Log into Google account\n4. Grant YouTube permissions\n5. After redirect, copy `code` parameter from URL\n6. Use code in next request (2.2 Callback)\n\n### Production Flow\nIn production, frontend redirects user automatically:\n```javascript\nwindow.location.href = response.authorization_url;\n```"
               },
@@ -436,8 +466,8 @@
                       "// Save social account ID for sync",
                       "if (response.social_account_id) {",
                       "    pm.environment.set('youtube_social_account_id', response.social_account_id);",
-                      "    console.log('✅ YouTube connected:', response.account_username);",
-                      "    console.log('📦 Social Account ID:', response.social_account_id);",
+                      "    console.log('\u2705 YouTube connected:', response.account_username);",
+                      "    console.log('\ud83d\udce6 Social Account ID:', response.social_account_id);",
                       "}"
                     ],
                     "type": "text/javascript"
@@ -449,8 +479,14 @@
                 "header": [],
                 "url": {
                   "raw": "{{base_url}}/functions/v1/oauth-youtube-callback?code=PASTE_CODE_HERE&state={{youtube_oauth_state}}",
-                  "host": ["{{base_url}}"],
-                  "path": ["functions", "v1", "oauth-youtube-callback"],
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "functions",
+                    "v1",
+                    "oauth-youtube-callback"
+                  ],
                   "query": [
                     {
                       "key": "code",
@@ -493,7 +529,7 @@
                       "        pm.expect(account.is_active).to.be.true;",
                       "    });",
                       "    ",
-                      "    console.log('📺 YouTube Account:');",
+                      "    console.log('\ud83d\udcfa YouTube Account:');",
                       "    console.log('  Username:', account.account_username);",
                       "    console.log('  Followers:', account.followers_count);",
                       "    console.log('  Last Sync:', account.last_synced_at);",
@@ -517,8 +553,14 @@
                 ],
                 "url": {
                   "raw": "{{base_url}}/rest/v1/social_account?user_id=eq.{{user_id}}&select=*,platform:platform_id(name)",
-                  "host": ["{{base_url}}"],
-                  "path": ["rest", "v1", "social_account"],
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "rest",
+                    "v1",
+                    "social_account"
+                  ],
                   "query": [
                     {
                       "key": "user_id",
@@ -552,10 +594,46 @@
                 ],
                 "url": {
                   "raw": "{{base_url}}/functions/v1/oauth-instagram-init",
-                  "host": ["{{base_url}}"],
-                  "path": ["functions", "v1", "oauth-instagram-init"]
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "functions",
+                    "v1",
+                    "oauth-instagram-init"
+                  ]
                 },
                 "description": "Initialize Instagram OAuth flow.\n\n### Coming Soon\nThis endpoint will be implemented after YouTube OAuth is complete.\n\n### Similar Flow\n1. Initialize OAuth\n2. User authorizes on Instagram\n3. Callback exchanges code for token\n4. Store tokens in Vault\n5. Sync content metadata"
+              },
+              "response": []
+            },
+            {
+              "name": "2.4b Instagram - OAuth Callback",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/functions/v1/oauth-instagram-callback?code=PASTE_CODE_HERE&state={{instagram_oauth_state}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "functions",
+                    "v1",
+                    "oauth-instagram-callback"
+                  ],
+                  "query": [
+                    {
+                      "key": "code",
+                      "value": "PASTE_CODE_HERE"
+                    },
+                    {
+                      "key": "state",
+                      "value": "{{instagram_oauth_state}}"
+                    }
+                  ]
+                },
+                "description": "Complete Instagram OAuth flow.\n\n### Coming Soon\nSimilar to YouTube callback."
               },
               "response": []
             }
@@ -576,14 +654,794 @@
                 ],
                 "url": {
                   "raw": "{{base_url}}/functions/v1/oauth-tiktok-init",
-                  "host": ["{{base_url}}"],
-                  "path": ["functions", "v1", "oauth-tiktok-init"]
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "functions",
+                    "v1",
+                    "oauth-tiktok-init"
+                  ]
                 },
                 "description": "Initialize TikTok OAuth flow.\n\n### Coming Soon\nThis endpoint will be implemented in Phase 2."
               },
               "response": []
+            },
+            {
+              "name": "2.5b TikTok - OAuth Callback",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/functions/v1/oauth-tiktok-callback?code=PASTE_CODE_HERE&state={{tiktok_oauth_state}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "functions",
+                    "v1",
+                    "oauth-tiktok-callback"
+                  ],
+                  "query": [
+                    {
+                      "key": "code",
+                      "value": "PASTE_CODE_HERE"
+                    },
+                    {
+                      "key": "state",
+                      "value": "{{tiktok_oauth_state}}"
+                    }
+                  ]
+                },
+                "description": "Complete TikTok OAuth flow.\n\n### Coming Soon\nSimilar to YouTube callback."
+              },
+              "response": []
             }
           ]
+        }
+      ]
+    },
+    {
+      "name": "Phase 3: Content Sync",
+      "description": "Pull metadata from connected social platforms.\n\n### Prerequisites\n- Complete Phase 2 (OAuth connection)\n- Have at least one active social account connection\n\n### What This Does\n1. Authenticates user\n2. Retrieves OAuth tokens from Vault\n3. Calls platform APIs to fetch content metadata\n4. Stores/updates content in database\n5. Returns sync statistics\n\n### Test Scenario\nSync YouTube videos after connecting YouTube account in Phase 2.",
+      "item": [
+        {
+          "name": "3.1 Sync YouTube Content",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const response = pm.response.json();",
+                  "",
+                  "pm.test(\"Sync was successful\", function () {",
+                  "    pm.expect(response.success).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test(\"Response contains sync statistics\", function () {",
+                  "    pm.expect(response).to.have.property('synced_count');",
+                  "    pm.expect(response).to.have.property('total_videos');",
+                  "});",
+                  "",
+                  "console.log('\ud83d\udcca Sync Results:');",
+                  "console.log('  Synced:', response.synced_count);",
+                  "console.log('  Failed:', response.failed_count);",
+                  "console.log('  Total:', response.total_videos);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{base_url}}/functions/v1/sync-youtube",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "sync-youtube"
+              ]
+            },
+            "description": "Sync YouTube videos from connected account.\n\n### Edge Function\n`sync-youtube`\n\n### Prerequisites\n- YouTube account connected (Phase 2)\n- Valid OAuth tokens in Vault\n\n### What This Does\n1. Retrieves YouTube OAuth tokens from Vault\n2. Refreshes token if expired\n3. Calls YouTube Data API v3:\n   - search.list (up to 250 videos)\n   - videos.list (detailed stats)\n4. Creates/updates content_item records\n5. Updates last_synced_at timestamp\n\n### Response\n```json\n{\n  \"success\": true,\n  \"synced_count\": 147,\n  \"failed_count\": 0,\n  \"total_videos\": 147,\n  \"social_account_id\": \"uuid\"\n}\n```\n\n### Next Step\nView synced content with **3.4 Get Synced Content**"
+          },
+          "response": []
+        },
+        {
+          "name": "3.2 Sync Instagram Content",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/functions/v1/sync-instagram",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "sync-instagram"
+              ]
+            },
+            "description": "Sync Instagram posts from connected account.\n\n### Coming Soon\nSimilar to YouTube sync but for Instagram posts."
+          },
+          "response": []
+        },
+        {
+          "name": "3.3 Sync TikTok Content",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/functions/v1/sync-tiktok",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "sync-tiktok"
+              ]
+            },
+            "description": "Sync TikTok videos from connected account.\n\n### Coming Soon\nSimilar to YouTube sync but for TikTok videos."
+          },
+          "response": []
+        },
+        {
+          "name": "3.4 Get Synced Content",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const response = pm.response.json();",
+                  "",
+                  "pm.test(\"Response is an array\", function () {",
+                  "    pm.expect(response).to.be.an('array');",
+                  "});",
+                  "",
+                  "if (response.length > 0) {",
+                  "    const firstContent = response[0];",
+                  "    ",
+                  "    pm.test(\"Content has required fields\", function () {",
+                  "        pm.expect(firstContent).to.have.property('id');",
+                  "        pm.expect(firstContent).to.have.property('title');",
+                  "        pm.expect(firstContent).to.have.property('content_url');",
+                  "    });",
+                  "    ",
+                  "    // Save first content ID for next tests",
+                  "    pm.environment.set('content_id', firstContent.id);",
+                  "    console.log('\ud83d\udce6 Saved content_id:', firstContent.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "apikey",
+                "value": "{{anon_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/rest/v1/content_item?user_id=eq.{{user_id}}&select=*&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "rest",
+                "v1",
+                "content_item"
+              ],
+              "query": [
+                {
+                  "key": "user_id",
+                  "value": "eq.{{user_id}}"
+                },
+                {
+                  "key": "select",
+                  "value": "*"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Retrieve synced content for current user.\n\n### PostgREST Query\nDirect database query to view synced content.\n\n### Response\n```json\n[\n  {\n    \"id\": \"uuid\",\n    \"title\": \"How to Code in Python\",\n    \"description\": \"Complete tutorial...\",\n    \"thumbnail_url\": \"https://...\",\n    \"content_url\": \"https://youtube.com/watch?v=...\",\n    \"views_count\": 50000,\n    \"likes_count\": 2500,\n    \"published_at\": \"2025-11-01T10:00:00Z\"\n  }\n]\n```"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Phase 4: AI Enhancement",
+      "description": "Generate AI-powered tags and optimize content metadata.\n\n### Prerequisites\n- Complete Phase 3 (Content Sync)\n- Have content items in database\n- OpenAI API key configured\n\n### What This Does\n1. Analyzes content title and description\n2. Generates SEO-optimized tags using GPT-4\n3. Creates seo_title and seo_description\n4. Stores tags with confidence scores\n\n### Use Cases\n- Improve content discoverability\n- Automate SEO optimization\n- Generate keyword suggestions",
+      "item": [
+        {
+          "name": "4.1 Generate AI Tags",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const response = pm.response.json();",
+                  "",
+                  "pm.test(\"AI generation successful\", function () {",
+                  "    pm.expect(response.success).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test(\"Tags were generated\", function () {",
+                  "    pm.expect(response.tags_generated).to.be.above(0);",
+                  "});",
+                  "",
+                  "pm.test(\"SEO metadata updated\", function () {",
+                  "    pm.expect(response.seo_updated).to.be.true;",
+                  "});",
+                  "",
+                  "console.log('\ud83e\udd16 AI Results:');",
+                  "console.log('  Tags Generated:', response.tags_generated);",
+                  "console.log('  SEO Updated:', response.seo_updated);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content_id\": \"{{content_id}}\",\n  \"regenerate\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/functions/v1/ai-generate-tags",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "ai-generate-tags"
+              ]
+            },
+            "description": "Generate AI-powered tags for content using OpenAI GPT-4.\n\n### Edge Function\n`ai-generate-tags`\n\n### Request Body\n```json\n{\n  \"content_id\": \"uuid\",\n  \"regenerate\": false\n}\n```\n\n### What This Does\n1. Fetches content title and description\n2. Sends to OpenAI GPT-4 with SEO prompt\n3. Generates 10-15 relevant tags\n4. Assigns tag types (keyword, topic, entity, emotion, trend)\n5. Calculates confidence scores (0.0-1.0)\n6. Creates optimized seo_title and seo_description\n7. Stores tags in content_tag table\n8. Updates content_item with SEO metadata\n\n### Response\n```json\n{\n  \"success\": true,\n  \"content_id\": \"uuid\",\n  \"tags_generated\": 12,\n  \"seo_updated\": true\n}\n```\n\n### Notes\n- Requires OpenAI API key in environment\n- Will fail if tags already exist (unless regenerate=true)\n- Cost: ~$0.02 per request (GPT-4)"
+          },
+          "response": []
+        },
+        {
+          "name": "4.2 Get Content Tags",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const response = pm.response.json();",
+                  "",
+                  "pm.test(\"Response is an array\", function () {",
+                  "    pm.expect(response).to.be.an('array');",
+                  "});",
+                  "",
+                  "if (response.length > 0) {",
+                  "    pm.test(\"Tags have required fields\", function () {",
+                  "        pm.expect(response[0]).to.have.property('tag');",
+                  "        pm.expect(response[0]).to.have.property('source');",
+                  "        pm.expect(response[0]).to.have.property('confidence_score');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "apikey",
+                "value": "{{anon_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/rest/v1/content_tag?content_id=eq.{{content_id}}&select=*",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "rest",
+                "v1",
+                "content_tag"
+              ],
+              "query": [
+                {
+                  "key": "content_id",
+                  "value": "eq.{{content_id}}"
+                },
+                {
+                  "key": "select",
+                  "value": "*"
+                }
+              ]
+            },
+            "description": "View AI-generated tags for content.\n\n### Response\n```json\n[\n  {\n    \"id\": \"uuid\",\n    \"content_id\": \"uuid\",\n    \"tag\": \"python tutorial\",\n    \"source\": \"ai_generated\",\n    \"tag_type\": \"keyword\",\n    \"confidence_score\": 0.92,\n    \"created_at\": \"2025-11-07T10:00:00Z\"\n  }\n]\n```"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Phase 5: Discovery & Search",
+      "description": "Public discovery APIs for browsing and searching content.\n\n### Key Features\n- **No authentication required** - Public endpoints\n- **SEO-optimized** - Cached responses, clean URLs\n- **Advanced filtering** - Category, platform, sort options\n- **Full-text search** - PostgreSQL full-text search\n\n### Use Cases\n- Anonymous browsing\n- Search engine indexing\n- Content discovery\n- Creator profiles",
+      "item": [
+        {
+          "name": "5.1 Browse Creators",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const response = pm.response.json();",
+                  "",
+                  "pm.test(\"Response structure is valid\", function () {",
+                  "    pm.expect(response.success).to.be.true;",
+                  "    pm.expect(response).to.have.property('creators');",
+                  "    pm.expect(response).to.have.property('pagination');",
+                  "});",
+                  "",
+                  "pm.test(\"Creators array exists\", function () {",
+                  "    pm.expect(response.creators).to.be.an('array');",
+                  "});",
+                  "",
+                  "if (response.creators.length > 0) {",
+                  "    const creator = response.creators[0];",
+                  "    pm.environment.set('creator_slug', creator.profile_slug);",
+                  "    console.log('\ud83d\udc64 First Creator:', creator.display_name);",
+                  "    console.log('\ud83d\udd17 Slug:', creator.profile_slug);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/functions/v1/browse-creators?category=gaming&sort_by=followers&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "browse-creators"
+              ],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "gaming"
+                },
+                {
+                  "key": "sort_by",
+                  "value": "followers"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Browse all public creator profiles.\n\n### Edge Function\n`browse-creators`\n\n### Authentication\nNone required - Public endpoint\n\n### Query Parameters\n- `category` (optional): gaming, music, education, etc.\n- `verified_only` (optional): true/false\n- `min_followers` (optional): Minimum follower count\n- `sort_by` (optional): followers | recent | popular\n- `limit` (optional): 1-100, default 50\n- `offset` (optional): Pagination offset\n\n### Response\n```json\n{\n  \"success\": true,\n  \"creators\": [...],\n  \"pagination\": {\n    \"total\": 245,\n    \"limit\": 20,\n    \"offset\": 0,\n    \"has_more\": true\n  }\n}\n```\n\n### Cache\n5 minutes (public, max-age=300)"
+          },
+          "response": []
+        },
+        {
+          "name": "5.2 Browse Content",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/functions/v1/browse-content?platform=youtube&sort_by=popular&limit=30",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "browse-content"
+              ],
+              "query": [
+                {
+                  "key": "platform",
+                  "value": "youtube"
+                },
+                {
+                  "key": "sort_by",
+                  "value": "popular"
+                },
+                {
+                  "key": "limit",
+                  "value": "30"
+                }
+              ]
+            },
+            "description": "Browse all public content items.\n\n### Public Endpoint\nNo authentication required.\n\n### Query Parameters\n- `category` (optional)\n- `platform` (optional): youtube, instagram, tiktok\n- `content_type` (optional)\n- `creator_slug` (optional)\n- `sort_by` (optional): recent | popular | trending\n- `limit`, `offset`\n\n### Cache\n3 minutes"
+          },
+          "response": []
+        },
+        {
+          "name": "5.3 Browse Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/functions/v1/browse-categories",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "browse-categories"
+              ]
+            },
+            "description": "Get all available content categories.\n\n### Response\n```json\n{\n  \"success\": true,\n  \"categories\": [\n    {\n      \"slug\": \"gaming\",\n      \"display_name\": \"Gaming\",\n      \"content_count\": 1250,\n      \"creator_count\": 45\n    }\n  ]\n}\n```"
+          },
+          "response": []
+        },
+        {
+          "name": "5.4 Get Creator by Slug",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/functions/v1/get-creator-by-slug?slug={{profile_slug}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "get-creator-by-slug"
+              ],
+              "query": [
+                {
+                  "key": "slug",
+                  "value": "{{profile_slug}}"
+                }
+              ]
+            },
+            "description": "Get creator profile by slug.\n\n### Public Endpoint\nUsed for profile pages: `/c/{slug}`\n\n### Response\nComplete creator profile with social accounts and recent content."
+          },
+          "response": []
+        },
+        {
+          "name": "5.5 Get Content Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/functions/v1/get-content-detail?id={{content_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "get-content-detail"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{content_id}}"
+                }
+              ]
+            },
+            "description": "Get detailed content item information.\n\n### Side Effects\nIncrements view_count on each request.\n\n### Response\nFull content metadata including embed HTML and tags."
+          },
+          "response": []
+        },
+        {
+          "name": "5.6 Get Trending Content",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/functions/v1/get-trending?limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "get-trending"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Get trending content based on recent views and engagement.\n\n### Algorithm\nScores content based on:\n- Recent views (last 7 days)\n- Likes/views ratio\n- Recency bonus\n- Velocity (growth rate)"
+          },
+          "response": []
+        },
+        {
+          "name": "5.7 Search Creators",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/functions/v1/search-creators?q=gaming&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "search-creators"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "gaming"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Full-text search for creators.\n\n### Query Parameters\n- `q` (required): Search query\n- `category` (optional): Filter by category\n- `limit`, `offset`\n\n### Search Fields\n- display_name\n- bio\n- primary_category"
+          },
+          "response": []
+        },
+        {
+          "name": "5.8 Search Content",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/functions/v1/search-content?q=python tutorial&limit=30",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "search-content"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "python tutorial"
+                },
+                {
+                  "key": "limit",
+                  "value": "30"
+                }
+              ]
+            },
+            "description": "Full-text search for content.\n\n### Search Fields\n- title\n- description\n- tags\n- seo_title\n- seo_description"
+          },
+          "response": []
+        },
+        {
+          "name": "5.9 Get SEO Metadata",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/functions/v1/get-seo-metadata?type=creator&slug={{profile_slug}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "get-seo-metadata"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "creator"
+                },
+                {
+                  "key": "slug",
+                  "value": "{{profile_slug}}"
+                }
+              ]
+            },
+            "description": "Get Open Graph and meta tags for SEO.\n\n### Query Parameters\n- `type`: creator | content\n- `slug` or `id`: Identifier\n\n### Response\nComplete Open Graph metadata for social sharing."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Phase 6: Analytics & Tracking",
+      "description": "Click tracking and analytics endpoints.\n\n### Features\n- Track content clicks\n- Track profile views\n- Referrer tracking\n- Anonymous analytics\n\n### Privacy\n- No PII collected\n- Aggregated metrics only\n- GDPR compliant",
+      "item": [
+        {
+          "name": "6.1 Track Click",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content_id\": \"{{content_id}}\",\n  \"referrer\": \"https://google.com\",\n  \"user_agent\": \"Mozilla/5.0...\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/functions/v1/track-click",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "track-click"
+              ]
+            },
+            "description": "Track content click event.\n\n### Edge Function\n`track-click`\n\n### Request Body\n```json\n{\n  \"content_id\": \"uuid\",\n  \"referrer\": \"https://source.com\",\n  \"user_agent\": \"Browser/Version\"\n}\n```\n\n### What This Does\n1. Validates content exists\n2. Records click event with timestamp\n3. Increments content.clicks_count\n4. Stores referrer for traffic analysis\n5. Returns success\n\n### Response\n```json\n{\n  \"success\": true,\n  \"tracked\": true\n}\n```\n\n### Privacy\n- No user identification\n- Anonymized metrics\n- Referrer only (no cookies)"
+          },
+          "response": []
+        },
+        {
+          "name": "6.2 Get Content Analytics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "apikey",
+                "value": "{{anon_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/rest/v1/content_item?id=eq.{{content_id}}&select=id,title,views_count,likes_count,comments_count,clicks_count",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "rest",
+                "v1",
+                "content_item"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "eq.{{content_id}}"
+                },
+                {
+                  "key": "select",
+                  "value": "id,title,views_count,likes_count,comments_count,clicks_count"
+                }
+              ]
+            },
+            "description": "Get analytics for specific content.\n\n### Metrics\n- views_count: Total views\n- likes_count: Total likes\n- comments_count: Total comments\n- clicks_count: Tracked clicks from StreamVibe"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Phase 7: SEO & Robots",
+      "description": "SEO optimization endpoints for search engines.\n\n### Endpoints\n- robots.txt - Crawler directives\n- sitemap.xml - URL discovery\n- SEO metadata - Open Graph tags",
+      "item": [
+        {
+          "name": "7.1 Get Robots.txt",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/functions/v1/robots",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "robots"
+              ]
+            },
+            "description": "Get robots.txt for search engine crawlers.\n\n### Response\n```\nUser-agent: *\nAllow: /\nSitemap: https://streamvibe.com/sitemap.xml\n```"
+          },
+          "response": []
+        },
+        {
+          "name": "7.2 Get Sitemap",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/functions/v1/sitemap",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "sitemap"
+              ]
+            },
+            "description": "Get XML sitemap for search engines.\n\n### Response\nXML sitemap with all public creator and content URLs.\n\n### Includes\n- Creator profiles: /c/{slug}\n- Content pages: /v/{id}\n- Category pages: /category/{slug}"
+          },
+          "response": []
         }
       ]
     }
