@@ -45,76 +45,150 @@ Following **Agile/SAFe** best practices:
 ---
 
 ### Epic #19: Platform Integrations & OAuth System
-**Priority:** P0 | **Status:** 🔴 0% - Blocked | **Sprint:** 3-4  
+**Priority:** P0 | **Status:** 🔴 20% - Blocked | **Sprint:** 3-5  
 **Business Value:** Connect YouTube, Instagram, TikTok accounts  
-**Dependencies:** Blocks Epic #20 (Content Sync)
+**Dependencies:** Blocks Epic #24 (Content Sync)
 
 **Features:**
-- 🔴 **Feature #13:** OAuth Integration (BLOCKED)
+- 🔴 **Feature: OAuth Core Implementation** (Sprint 3 - BLOCKED)
   - 🔴 #10: Missing oauth_state table
   - 🔴 #11: Missing Vault wrapper functions
   - 🔴 #12: Missing schema columns
-- 📅 Token Refresh & Health Monitoring (TBD)
+  - **Acceptance Criteria:**
+    - [ ] `oauth_state` table created (#10)
+    - [ ] Vault functions implemented (#11)
+    - [ ] Schema columns verified (#12)
+    - [ ] YouTube OAuth flow works end-to-end
+    - [ ] Instagram OAuth flow works end-to-end
+    - [ ] TikTok OAuth flow works end-to-end
+    - [ ] Access tokens stored securely in Vault
+    - [ ] CSRF protection via state validation
 
-**Acceptance Criteria:**
-- [ ] `oauth_state` table created (#10)
-- [ ] Vault functions implemented (#11)
-- [ ] Schema columns verified (#12)
-- [ ] YouTube OAuth flow works end-to-end
-- [ ] Instagram OAuth flow works end-to-end
-- [ ] TikTok OAuth flow works end-to-end
-- [ ] Access tokens stored securely in Vault
-- [ ] CSRF protection via state validation
+- 📅 **Feature: OAuth Production Readiness** (Sprint 4-5)
+  - 📋 **#28:** OAuth Token Refresh & Lifecycle Management
+    - Auto-refresh tokens before expiration
+    - Cron job every 6 hours checks expiring tokens
+    - Graceful handling of expired tokens
+    - User notification on auth failures
+  - 📋 **#29:** OAuth Connection Cleanup & Error Recovery
+    - Vault cleanup on account disconnect
+    - 30-day grace period before permanent deletion
+    - Cascade delete triggers for data integrity
+    - Error recovery for partial failures
+  - 📋 **#32:** Multi-Account Support per Platform
+    - Free tier: 1 account per platform
+    - Creator tier: 3 accounts per platform
+    - Pro tier: 5 accounts per platform
+    - Enterprise: Unlimited accounts
+    - Quota enforcement at OAuth init
+  - **Acceptance Criteria:**
+    - [ ] Token refresh working automatically
+    - [ ] Cleanup triggers prevent orphaned data
+    - [ ] Multi-account limits enforced by tier
+    - [ ] All 3 platforms support multiple accounts
 
 ---
 
 ### Epic #24: Content Management & Synchronization
-**Priority:** P0 | **Status:** 🔴 0% - Blocked | **Sprint:** 4-5  
+**Priority:** P0 | **Status:** 🔴 10% - Blocked | **Sprint:** 3-5  
 **Business Value:** Sync content from YouTube, Instagram, TikTok  
 **Dependencies:** Requires Epic #19 (OAuth)
 
 **Features:**
-- 🔴 **Feature 3.1:** Content Schema & Database (BLOCKED)
-  - Missing `thumbnail_url` column
-  - Missing `platform_url` column
+- 🔴 **Feature: Content Sync Core Implementation** (Sprint 3-4 - BLOCKED)
+  - 🔴 #14: Missing `content_url` column in content_item table
+  - 🔴 #17: Missing `last_synced_at` column in content_item table
   - Schema mismatch for `content_type`
-- 🔴 **Feature 3.2:** YouTube Content Sync (BLOCKED)
-- 🔴 **Feature 3.3:** Instagram Content Sync (BLOCKED)
-- 🔴 **Feature 3.4:** TikTok Content Sync (BLOCKED)
-- 📅 **Feature 3.5:** Scheduled Sync Jobs (Cron)
-- 📅 **Feature 3.6:** Sync Health & Monitoring
+  - **Acceptance Criteria:**
+    - [ ] Schema gaps fixed (#14, #17)
+    - [ ] YouTube sync works end-to-end
+    - [ ] Instagram sync works end-to-end
+    - [ ] TikTok sync works end-to-end
+    - [ ] Content appears in database
+    - [ ] Thumbnails stored and accessible
+    - [ ] Engagement stats synced
 
-**Acceptance Criteria:**
-- [ ] Schema gaps fixed
-- [ ] YouTube sync works end-to-end
-- [ ] Instagram sync works end-to-end
-- [ ] TikTok sync works end-to-end
-- [ ] Content appears in database
-- [ ] Thumbnails stored and accessible
-- [ ] Engagement stats synced
-- [ ] Rate limits respected
+- � **Feature: Content Sync Reliability** (Sprint 5)
+  - � **#30:** Content Sync Health Monitoring & Alerts
+    - Real-time dashboard showing sync success rates per platform
+    - Alerts for failure rate > 5%
+    - Track sync duration and platform API rate limits
+    - Identify accounts with repeated failures (>3 in 24hrs)
+    - Weekly health report emailed to admins
+  - 📋 **#31:** Automatic Sync Retry with Exponential Backoff
+    - Failed syncs auto-retry up to 3 times
+    - Exponential backoff: 1min → 5min → 15min
+    - Different retry strategies per error type
+    - Permanent failure notifications after max retries
+    - Retry queue visible in admin dashboard
+  - 📋 **#34:** Real-time Content Sync via Platform Webhooks
+    - Webhook receivers for YouTube, Instagram, TikTok
+    - HMAC signature verification for security
+    - Event-driven sync (< 5 minutes vs hourly polling)
+    - Deduplication logic to prevent duplicate processing
+    - Fallback to scheduled sync if webhook missed
+  - **Acceptance Criteria:**
+    - [ ] Sync success rate > 98%
+    - [ ] Failed syncs retry automatically
+    - [ ] Webhooks trigger real-time sync
+    - [ ] Health monitoring dashboard operational
+
+- 📅 **Feature: Scheduled Sync Jobs** (Sprint 4)
+  - Cron jobs for hourly content sync
+  - Rate limiting to respect platform quotas
+  - Batch processing for efficiency
+  
+- 📅 **Feature: Duplicate Content Detection** (Sprint 6)
+  - Prevent duplicate content across platforms
+  - Cross-platform content matching
+  - Deduplication strategies
 
 ---
 
 ### Epic #25: AI & Analytics Engine
-**Priority:** P1 | **Status:** 📅 Planned | **Sprint:** 5-6  
+**Priority:** P1 | **Status:** 📅 Planned | **Sprint:** 6-7  
 **Business Value:** AI-powered content tagging and recommendations  
 **Dependencies:** Requires Epic #24 (Content must exist)
 
 **Features:**
-- 📅 **Feature 4.1:** AI Tag Generation System
-- 📅 **Feature 4.2:** Tag Storage & Search
-- 📅 **Feature 4.3:** AI Quota Management
-- 📅 **Feature 4.4:** Tag Quality & Feedback
-- 📅 **Feature 4.5:** Advanced AI Features (Sentiment, Genre)
+- 📅 **Feature: AI Tag Generation System** (Sprint 6)
+  - AI generates 5-15 tags per content item
+  - Multi-language support
+  - Tag quality > 85% accuracy
+  - Response time < 3 seconds
+  
+- 📅 **Feature: Tag Storage & Search** (Sprint 6)
+  - Tag indexing for fast search
+  - Full-text search across tags
+  - Tag popularity tracking
+  
+- 📅 **Feature: AI Quota Management** (Sprint 6)
+  - Free tier: 25 AI analyses/month
+  - Creator tier: 100 AI analyses/month
+  - Pro tier: Unlimited AI analyses
+  - Quota tracking and enforcement
+  
+- 📅 **Feature: Operations & Monitoring Dashboard** (Sprint 6)
+  - 📋 **#33:** Admin Operations Dashboard with Real-time Monitoring
+    - Real-time metrics: total users, active users (DAU/MAU), subscription breakdown
+    - OAuth connections by platform with health status
+    - Content sync success rates and failure tracking
+    - AI quota usage trends and alerts
+    - API response times (p50, p95, p99) and error rates
+    - 5-second auto-refresh for real-time updates
+    - Export metrics to CSV/JSON for reporting
+  - **Acceptance Criteria:**
+    - [ ] Dashboard shows all key metrics
+    - [ ] Real-time alerts for critical thresholds
+    - [ ] Historical trends (7-day, 30-day charts)
+    - [ ] Drill-down capability per platform/account
+    - [ ] Role-based access (admin, read-only)
 
-**Acceptance Criteria:**
-- [ ] AI generates 5-15 tags per content item
-- [ ] Tags stored and searchable
-- [ ] AI quota tracked (25 Free, 100 Creator, Unlimited Pro)
-- [ ] Multi-language support
-- [ ] Response time < 3 seconds
-- [ ] Tag accuracy > 85%
+- 📅 **Feature: Advanced AI Features** (Sprint 7)
+  - Sentiment analysis
+  - Genre classification
+  - Content recommendations
+  - Tag feedback loop
 
 ---
 
@@ -186,16 +260,22 @@ Following **Agile/SAFe** best practices:
 **Goal:** Enable content synchronization from platforms
 
 - [ ] Epic #24: Content Sync (Priority: P0)
-- [ ] Feature 3.1: Fix content schema
-- [ ] Feature 3.2: YouTube sync working
-- [ ] Feature 3.3: Instagram sync working
-- [ ] Feature 3.4: TikTok sync working
+- [ ] Feature: Content Sync Core Implementation
+  - [ ] Fix #14: Add content_url column
+  - [ ] Fix #17: Add last_synced_at column
+  - [ ] Feature: YouTube sync working
+  - [ ] Feature: Instagram sync working
+  - [ ] Feature: TikTok sync working
+- [ ] Feature: Scheduled Sync Jobs
+  - [ ] pg_cron jobs configured
+  - [ ] Rate limiting implemented
 
 **Success Criteria:**
-- [ ] Schema gaps fixed
+- [ ] Schema gaps fixed (#14, #17)
 - [ ] All 3 platforms sync successfully
 - [ ] Content stored in database
 - [ ] Thumbnails uploaded to Storage
+- [ ] Scheduled jobs running hourly
 
 **Risks:**
 - Platform API rate limits (High)
